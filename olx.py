@@ -44,21 +44,37 @@ def get_content_for_url(url):
 def parse_offer(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
-    title = html_parser.find(class_="linkWithHash").child
     if not url:
         # detail url is not present
         return []
-
     if urlparse(url).hostname not in WHITELISTED_DOMAINS:
         # domain is not supported by this backend
         return []
-    # print(urlparse(url).hostname, url)
-    return {
-        'detail_url': url
-    }
+    return url
+    # return {
+    #     'detail_url': url
+    # }
 
 
-def parse_content(markup):
+def get_title(offer_markup):
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    title = html_parser.h1.contents
+    return title[0].replace("\n", "").replace("  ","")
+
+
+def get_price(offer_markup):
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    price = html_parser.find(class_="xxxx-large").contents
+    return price[0]
+
+
+def get_phone(offer_markup):
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    phone = html_parser.find(class_="xx-large").contents
+    return phone[0]
+
+
+def parse_avalible_offers(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
     offers = html_parser.find_all(class_='offer')
     parsed_offers = [parse_offer(str(offer)) for offer in offers if offer]
@@ -66,6 +82,18 @@ def parse_content(markup):
     for i in range(3):
         del parsed_offers[0]
     return parsed_offers
+
+
+def parse_description(markup,url):
+    html_parser = BeautifulSoup(markup, "html.parser")
+    descriptions = html_parser.find_all(class_='offerbody')
+    parsed_titles = [get_title(str(desc)) for desc in descriptions if desc]
+    parsed_prices = [get_price(str(desc)) for desc in descriptions if desc]
+    return {
+        "title": parsed_titles,
+        "price": parsed_prices,
+        "url": url
+    }
 
 
 def get_category(main_category, subcategory, detail_category, region, **filters):
@@ -78,7 +106,7 @@ def get_category(main_category, subcategory, detail_category, region, **filters)
         print(url)
         if response.status_code > 300:
             break
-        parsed_content.append(parse_content(response.content))
+        parsed_content.append(parse_avalible_offers(response.content))
         page += 1
         page_attr = "?page={}".format(page)
 
@@ -88,5 +116,20 @@ def get_category(main_category, subcategory, detail_category, region, **filters)
     return parsed_content
 
 
+def get_description(parsed_urls):
+    i = 0
+    descriptions = []
+    for url in parsed_urls:
+        response = get_content_for_url(url)
+        descriptions.append(parse_description(response.content,url))
+        i+=1
+        if i>5:
+            break
+    return descriptions
+
+
 if __name__ == '__main__':
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk")
+    descriptions = get_description(parsed_urls)
+    for element in descriptions:
+        print(element)
