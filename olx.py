@@ -40,6 +40,7 @@ def get_content_for_url(url):
         return None
     return response
 
+
 def parse_offer(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
