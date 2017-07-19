@@ -1,5 +1,4 @@
 # python modules
-import re
 from urllib.parse import urlparse
 
 # third party
@@ -7,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 # own modules
-from utils import Cache, caching
+from scrapper_helpers.utils import caching
 
 BASE_URL = 'https://www.olx.pl'
 DEBUG = True
