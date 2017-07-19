@@ -7,8 +7,10 @@ import requests
 from bs4 import BeautifulSoup
 
 # own modules
+from utils import Cache, caching
 
-BASE_URL = 'https://www.olx.pl/'
+BASE_URL = 'https://www.olx.pl'
+DEBUG = True
 
 WHITELISTED_DOMAINS = [
     'olx.pl',
@@ -29,6 +31,7 @@ def get_url(main_category, subcategory, detail_category, region, page, **filters
     return "/".join([BASE_URL, main_category, subcategory, detail_category, region, page or ""])
 
 
+@caching
 def get_content_for_url(url):
     response = requests.get(url, allow_redirects=False)
     try:
@@ -38,11 +41,10 @@ def get_content_for_url(url):
         return None
     return response
 
-
 def parse_offer(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
-
+    title = html_parser.find(class_="linkWithHash").child
     if not url:
         # detail url is not present
         return []
