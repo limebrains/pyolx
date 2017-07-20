@@ -68,8 +68,8 @@ def get_price(offer_markup):
 
 def get_yardage(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    yardage = html_parser.sup.parent.text
     try:
+        yardage = html_parser.sup.parent.text
         return int(yardage.replace("\t", "").replace("\n", "").replace(" m", ""))
     except ValueError:
         return None
@@ -177,9 +177,9 @@ def get_category(main_category, subcategory, detail_category, region, **filters)
     while True:
         url = get_url(main_category, subcategory, detail_category, region, page_attr, **filters)
         response = get_content_for_url(url)
-        print(url)
         if response.status_code > 300:
             break
+        print("Loaded page {} of offers".format(page))
         parsed_content.append(parse_avalible_offers(response.content))
         page += 1
         page_attr = "?page={}".format(page)
@@ -195,11 +195,14 @@ def get_description(parsed_urls):
     descriptions = []
     for url in parsed_urls:
         response = get_content_for_url(url)
-        descriptions.append(parse_offer(response.content, url))
-        # if DEBUG:
-        #     i += 1
-        #     if i > 5:
-        #         break
+        try:
+            descriptions.append(parse_offer(response.content, url))
+        except AttributeError:
+            print("This offer is not available anymore")
+        if DEBUG:
+            i += 1
+            if i > 5:
+                break
     return descriptions
 
 
