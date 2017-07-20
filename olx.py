@@ -63,7 +63,11 @@ def get_title(offer_markup):
 def get_price(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     price = html_parser.find(class_="xxxx-large").text
-    return price
+    output = ""
+    for char in price:
+        if char.isdigit():
+            output += char
+    return int(output)
 
 
 def get_yardage(offer_markup):
@@ -78,7 +82,7 @@ def get_yardage(offer_markup):
 def parse_description(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     description = html_parser.find(class_="large").text
-    return description.replace("  ", "")
+    return description.replace("  ", "").replace("\n", "").replace("\r", "")
 
 
 def get_img_url(offer_markup):
@@ -207,3 +211,6 @@ def get_description(parsed_urls):
 if __name__ == '__main__':
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk")
     descriptions = get_description(parsed_urls)
+    for element in descriptions:
+        print()
+        print(element)
