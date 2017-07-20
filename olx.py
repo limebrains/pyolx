@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 # own modules
 from scrapper_helpers.utils import caching
 
-BASE_URL = 'https://www.olx.pl'
+BASE_URL = 'https://www.olx.pl/'
 OFFERS_FEATURED_PER_PAGE = 3
 DEBUG = True
 
@@ -26,10 +26,41 @@ def flatten(container):
         else:
             yield i
 
+# TODO: remove polish chars
+def city_name(input):
+    out = ""
+    for char in input:
+        if char == " ":
+            out += "-"
+        else:
+            out += char.lower()
+    return out
 
-def get_url(main_category, subcategory, detail_category, region, page, **filters):
-    return "/".join([BASE_URL, main_category, subcategory, detail_category, region, page or ""])
+def url_price_from(price):
+    return "search%5Bfilter_float_price%3Afrom%5D=" + str(price)
 
+def url_price_to(price):
+    return "search%5Bfilter_float_price%3Ato%5D=800" + str(price)
+
+def get_url(page=None, *args):
+    url = BASE_URL
+    for element in args:
+        if element is not None:
+            if "filter" in url and "filter" in element:
+                url += element + "&"
+            elif "filter" in element:
+                url += "?" + element + "&"
+            else:
+                url += element + "/"
+    if page is not None:
+        if "filter" in url:
+            url += "&" + page
+        else:
+            url += "?" + page
+    return url
+
+def url_buildtype(type):
+    return "search%5Bfilter_enum_builttype%5D%5B0%5D=" + type
 
 @caching
 def get_content_for_url(url):
@@ -104,8 +135,8 @@ def get_date_added(offer_markup):
         return date[0].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
-# parses data from google tag manager script
-def parse_data(offer_markup):
+# parses flat data from google tag manager script
+def parse_flat_data(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     data = html_parser.find_all('script')
     output = {"private_business": None, "floor": None, "rooms": None, "furniture": None, "builttype": None}
@@ -155,7 +186,7 @@ def parse_offer(markup, url):
     parsed_yardage = get_yardage(str(offer_content))
     description = parse_description(str(offer_content))
     offer_content = html_parser.body
-    offer_data = parse_data(str(offer_content))
+    offer_data = parse_flat_data(str(offer_content))
     keys = list(offer_data.keys())
     values = list(offer_data.values())
     return {
@@ -174,21 +205,22 @@ def parse_offer(markup, url):
     }
 
 
-def get_category(main_category, subcategory, detail_category, region, **filters):
+def get_category(main_category, subcategory, detail_category, region, *args):
     parsed_content = []
     page = 1
     page_attr = None
     while True:
-        url = get_url(main_category, subcategory, detail_category, region, page_attr, **filters)
+        url = get_url(page_attr, main_category, subcategory, detail_category, region, *args)
+        print(url)
         response = get_content_for_url(url)
         if response.status_code > 300:
             break
         print("Loaded page {} of offers".format(page))
         parsed_content.append(parse_available_offers(response.content))
         page += 1
-        page_attr = "?page={}".format(page)
+        page_attr = "page={}".format(page)
     parsed_content = list(flatten(parsed_content))
-    print(str(len(parsed_content)) + " offers")
+    print("Loaded " + str(len(parsed_content)) + " offers")
     return parsed_content
 
 
@@ -203,13 +235,61 @@ def get_description(parsed_urls):
             print("This offer is not available anymore")
         if DEBUG:
             i += 1
-            if i > 5:
+            if i > 3:
                 break
     return descriptions
 
 
+def parse_url(markup):
+    html_parser = BeautifulSoup(markup, "html.parser")
+    try:
+        output = {}
+        urls = html_parser.find_all(class_="parent")
+        for element in urls:
+            if element.attrs['data-id'].isdigit():
+                output[element.attrs['data-id']] = []
+                output[element.attrs['data-id']].extend(
+                    [element.span.text, element.attrs["href"].split("/")[len(element.attrs["href"].split("/")) - 2]])
+        return output
+    except AttributeError:
+        pass
+
+
+# everything on olx (ignore for now)
+def parse_cat(markup, parsed_urls):
+    html_parser = BeautifulSoup(markup, "html.parser")
+    sub_cats = html_parser.find_all(class_="link-relatedcategory")
+    for element in sub_cats:
+        parsed_urls[element.attrs['data-category-id']].append({element.attrs['data-id']: [element.span.span.text,
+                                                                                          element.attrs['href'].split(
+                                                                                              "/")[
+                                                                                              len(element.attrs[
+                                                                                                  'href'].split(
+                                                                                                  "/")) - 2]]})
+    return parsed_urls
+
+
+# everything on olx
+def get_available_main_sub_categories():
+    url = get_url()
+    response = get_content_for_url(url).content
+    html_parser = BeautifulSoup(response, "html.parser")
+    page_content = html_parser.find(class_='maincategories')
+    parsed_urls = parse_url(str(page_content))
+    print(parsed_urls)
+    print()
+    sub_urls = parse_cat(str(page_content), parsed_urls)
+    print(sub_urls)
+    return sub_urls
+
+
+
 if __name__ == '__main__':
-    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk")
+    # get_available_main_sub_categories()
+    p_from = url_price_from(2000)
+    p_to = url_price_to(3000)
+    typ = "apartamentowiec"
+    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk",p_from,p_to,typ)
     descriptions = get_description(parsed_urls)
     for element in descriptions:
         print()
