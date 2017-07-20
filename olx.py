@@ -134,7 +134,7 @@ def parse_data(offer_markup):
     return output
 
 
-def parse_avalible_offers(markup):
+def parse_available_offers(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
     offers = html_parser.find_all(class_='offer')
     parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][OFFERS_FEATURED_PER_PAGE:]
@@ -180,13 +180,11 @@ def get_category(main_category, subcategory, detail_category, region, **filters)
         if response.status_code > 300:
             break
         print("Loaded page {} of offers".format(page))
-        parsed_content.append(parse_avalible_offers(response.content))
+        parsed_content.append(parse_available_offers(response.content))
         page += 1
         page_attr = "?page={}".format(page)
-
     parsed_content = list(flatten(parsed_content))
     print(str(len(parsed_content)) + " offers")
-    # print(parsed_content)
     return parsed_content
 
 
@@ -209,6 +207,3 @@ def get_description(parsed_urls):
 if __name__ == '__main__':
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk")
     descriptions = get_description(parsed_urls)
-    for element in descriptions:
-        print()
-        print(element)
