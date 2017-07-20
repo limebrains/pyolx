@@ -59,7 +59,7 @@ def parse_offer(offer_markup):
 def get_title(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     title = html_parser.h1.contents
-    return title[0].replace("\n", "").replace("  ","")
+    return title[0].replace("\n", "").replace("  ", "")
 
 
 def get_price(offer_markup):
@@ -68,10 +68,19 @@ def get_price(offer_markup):
     return price[0]
 
 
-def get_phone(offer_markup):
+def get_img_url(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    phone = html_parser.find(class_="xx-large").contents
-    return phone[0]
+    img = html_parser.find(class_="bigImage").attrs["src"]
+    return img
+
+
+def get_date_added(offer_markup):
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    date = html_parser.find(class_="offer-titlebox__details").em.contents
+    try:
+        return date[4].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", "")
+    except IndexError:
+        return date[0].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
 def parse_avalible_offers(markup):
@@ -84,15 +93,19 @@ def parse_avalible_offers(markup):
     return parsed_offers
 
 
-def parse_description(markup,url):
+def parse_description(markup, url):
     html_parser = BeautifulSoup(markup, "html.parser")
-    descriptions = html_parser.find_all(class_='offerbody')
-    parsed_titles = [get_title(str(desc)) for desc in descriptions if desc]
-    parsed_prices = [get_price(str(desc)) for desc in descriptions if desc]
+    offer_content = html_parser.find_all(class_='offerbody')
+    parsed_titles = [get_title(str(desc)) for desc in offer_content if desc]
+    parsed_prices = [get_price(str(desc)) for desc in offer_content if desc]
+    parsed_imgs = [get_img_url(str(desc)) for desc in offer_content if desc]
+    parsed_dates = [get_date_added(str(desc)) for desc in offer_content if desc]
     return {
-        "title": parsed_titles,
-        "price": parsed_prices,
-        "url": url
+        "title": parsed_titles[0],
+        "price": parsed_prices[0],
+        "url": url,
+        "date": parsed_dates[0],
+        "img": parsed_imgs[0]
     }
 
 
@@ -111,8 +124,8 @@ def get_category(main_category, subcategory, detail_category, region, **filters)
         page_attr = "?page={}".format(page)
 
     parsed_content = list(flatten(parsed_content))
-    print(len(parsed_content))
-    print(parsed_content)
+    print(str(len(parsed_content)) + "offers")
+    # print(parsed_content)
     return parsed_content
 
 
@@ -121,9 +134,9 @@ def get_description(parsed_urls):
     descriptions = []
     for url in parsed_urls:
         response = get_content_for_url(url)
-        descriptions.append(parse_description(response.content,url))
-        i+=1
-        if i>5:
+        descriptions.append(parse_description(response.content, url))
+        i += 1
+        if i > 5:
             break
     return descriptions
 
