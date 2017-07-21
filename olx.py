@@ -52,8 +52,15 @@ def url_price_to(price):
 
 
 def url_rooms(number):
+    # 4 and more rooms as 4
+    if number > 4:
+        number = 4
     numbers = {1: "one", 2: "two", 3: "three", 4: "four"}
-    return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers[number])
+    try:
+        return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers[number])
+    except KeyError:
+        log.warning("Incorrect number of rooms")
+        pass
 
 
 def url_yardage_from(minimum):
@@ -72,11 +79,19 @@ def url_furniture(furniture):
 
 
 def url_floor(floor):
+    # 11 means above 10, 17 means "poddasze"
+    if floor > 10 and floor != 17:
+        floor = 11
     return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_{0}".format(str(floor))
 
 
 def url_builttype(builttype):
-    return "search%5Bfilter_enum_builttype%5D%5B0%5D={0}".format(builttype)
+    available = ["blok", "kamienica", "szeregowiec", "apartamentowiec", "wolnostojacy", "loft"]
+    if builttype in available:
+        return "search%5Bfilter_enum_builttype%5D%5B0%5D={0}".format(builttype)
+    else:
+        log.warning("This built type isn't available")
+        pass
 
 
 def get_url(page=None, *args):
@@ -92,7 +107,25 @@ def get_url(page=None, *args):
                     url += "?" + element + "&"
             else:
                 url += element + "/"
+    if "page" not in url:
+        if page is not None:
+            url += "?" + page
     return url
+
+
+def get_page_count(markup):
+    html_parser = BeautifulSoup(markup, "html.parser")
+    script = html_parser.head.script.next_sibling.next_sibling.next_sibling.text.split(",")
+    for element in script:
+        if "page_count" in element:
+            tmp = element.split(":")
+            out = ""
+            for char in tmp[len(tmp) - 1]:
+                if char.isdigit():
+                    out += char
+            return int(out)
+    log.warning("Error no page number found. Please check if it's valid olx page.")
+    return 0
 
 
 # TODO: Caching for long urls
@@ -140,7 +173,7 @@ def get_yardage(offer_markup):
     try:
         yardage = html_parser.sup.parent.text
         return int(yardage.replace("\t", "").replace("\n", "").replace(" m", ""))
-    except ValueError:
+    except AttributeError:
         return None
 
 
@@ -156,7 +189,6 @@ def get_img_url(offer_markup):
     output = []
     for element in img:
         output.append(element.attrs["src"])
-
     return output
 
 
@@ -249,8 +281,11 @@ def parse_offer(markup, url):
 def get_category(main_category, subcategory, detail_category, region, *args):
     parsed_content = []
     page = 1
+    url = get_url(None, main_category, subcategory, detail_category, region, *args)
+    response = get_content_for_url(url)
+    page_max = get_page_count(response.content)
     page_attr = None
-    while True:
+    while page <= page_max:
         url = get_url(page_attr, main_category, subcategory, detail_category, region, *args)
         log.debug(url)
         response = get_content_for_url(url)
@@ -340,10 +375,12 @@ if __name__ == '__main__':
     yard_min = url_yardage_from(100)
     yard_max = url_yardage_to(40)
     floor = url_floor(4)
-    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, floor)
+    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city)
     # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, p_from, p_to, typ, rooms)
     # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem",city)
     descriptions = get_description(parsed_urls)
     for element in descriptions:
         log.info("\n")
-        log.info(json.dumps(element))
+        # json dumps doesn't work with polish chars
+        # log.info(json.dumps(element))
+        print(element)
