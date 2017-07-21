@@ -10,6 +10,7 @@ from scrapper_helpers.utils import caching
 
 BASE_URL = 'https://www.olx.pl/'
 OFFERS_FEATURED_PER_PAGE = 3
+POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 DEBUG = True
 
 WHITELISTED_DOMAINS = [
@@ -27,39 +28,35 @@ def flatten(container):
             yield i
 
 
+def replace_all(text, dic):
+    for i, j in dic.items():
+        text = text.replace(i, j)
+    return text
+
+
 def city_name(city):
-    POLISH_CHARACTERS = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
-    out = ""
-    city = city.lower()
-    for char in city:
-        if char == " ":
-            out += "-"
-        elif char in POLISH_CHARACTERS.keys():
-            out += POLISH_CHARACTERS[char]
-        else:
-            out += char
-    return out
+    return replace_all(city.lower(), POLISH_CHARACTERS_MAPPING).replace(" ", "-")
 
 
 def url_price_from(price):
-    return "search%5Bfilter_float_price%3Afrom%5D=" + str(price)
+    return "search%5Bfilter_float_price%3Afrom%5D={0}".format(str(price))
 
 
 def url_price_to(price):
-    return "search%5Bfilter_float_price%3Ato%5D=" + str(price)
+    return "search%5Bfilter_float_price%3Ato%5D={0}".format(str(price))
 
 
 def url_rooms(number):
     numbers = {1: "one", 2: "two", 3: "three", 4: "four"}
-    return "search%5Bfilter_enum_rooms%5D%5B0%5D=" + numbers[number]
+    return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers[number])
 
 
 def url_yardage_from(minimum):
-    return "search%5Bfilter_float_m%3Afrom%5D=" + str(minimum)
+    return "search%5Bfilter_float_m%3Afrom%5D={0}".format(str(minimum))
 
 
 def url_yardage_to(maximum):
-    return "search%5Bfilter_float_m%3Ato%5D=" + str(maximum)
+    return "search%5Bfilter_float_m%3Ato%5D={0}".format(str(maximum))
 
 
 def url_furniture(furniture):
@@ -70,7 +67,11 @@ def url_furniture(furniture):
 
 
 def url_floor(floor):
-    return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_" + str(floor)
+    return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_{0}".format(str(floor))
+
+
+def url_builttype(builttype):
+    return "search%5Bfilter_enum_builttype%5D%5B0%5D={0}".format(builttype)
 
 
 def get_url(page=None, *args):
@@ -89,18 +90,14 @@ def get_url(page=None, *args):
     return url
 
 
-def url_buildtype(type):
-    return "search%5Bfilter_enum_builttype%5D%5B0%5D=" + type
-
-
 # TODO: Caching for long urls
 @caching
 def get_content_for_url(url):
     response = requests.get(url, allow_redirects=False)
     try:
         response.raise_for_status()
-    except requests.HTTPError:
-        print('Request for {} failed.'.format(url))
+    except requests.HTTPError as e:
+        print('Request for {0} failed. Error: '.format(url, e))
         return None
     return response
 
@@ -251,13 +248,13 @@ def get_category(main_category, subcategory, detail_category, region, *args):
         response = get_content_for_url(url)
         if response.status_code > 300:
             break
-        print("Loaded page {} of offers".format(page))
+        print("Loaded page {0} of offers".format(page))
         offers = parse_available_offers(response.content)
         if offers is None:
             break
         parsed_content.append(offers)
         page += 1
-        page_attr = "page={}".format(page)
+        page_attr = "page={0}".format(page)
     parsed_content = list(flatten(parsed_content))
     print("Loaded " + str(len(parsed_content)) + " offers")
     return parsed_content
@@ -328,7 +325,7 @@ if __name__ == '__main__':
     p_from = url_price_from(1000)
     p_to = url_price_to(3000)
     furniture = url_furniture(True)
-    typ = url_buildtype("blok")
+    typ = url_builttype("blok")
     rooms = url_rooms(3)
     yard_min = url_yardage_from(100)
     yard_max = url_yardage_to(40)
