@@ -1,4 +1,5 @@
 # python modules
+import json
 from urllib.parse import urlparse
 import logging
 
@@ -14,6 +15,8 @@ OFFERS_FEATURED_PER_PAGE = 3
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 DEBUG = True
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
+log = logging.getLogger(__file__)
 
 WHITELISTED_DOMAINS = [
     'olx.pl',
@@ -99,7 +102,7 @@ def get_content_for_url(url):
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
-        logging.warning('Request for {0} failed. Error: '.format(url, e))
+        log.warning('Request for {0} failed. Error: '.format(url, e))
         return None
     return response
 
@@ -207,7 +210,7 @@ def parse_available_offers(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
     not_found = html_parser.find(class_="emptynew")
     if not_found is not None:
-        logging.warning("No offers found")
+        log.warning("No offers found")
         return
     offers = html_parser.find_all(class_='offer')
     parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][OFFERS_FEATURED_PER_PAGE:]
@@ -249,11 +252,11 @@ def get_category(main_category, subcategory, detail_category, region, *args):
     page_attr = None
     while True:
         url = get_url(page_attr, main_category, subcategory, detail_category, region, *args)
-        logging.debug(url)
+        log.debug(url)
         response = get_content_for_url(url)
         if response.status_code > 300:
             break
-        logging.info("Loaded page {0} of offers".format(page))
+        log.info("Loaded page {0} of offers".format(page))
         offers = parse_available_offers(response.content)
         if offers is None:
             break
@@ -261,7 +264,7 @@ def get_category(main_category, subcategory, detail_category, region, *args):
         page += 1
         page_attr = "page={0}".format(page)
     parsed_content = list(flatten(parsed_content))
-    logging.info("Loaded " + str(len(parsed_content)) + " offers")
+    log.info("Loaded " + str(len(parsed_content)) + " offers")
     return parsed_content
 
 
@@ -275,7 +278,7 @@ def get_description(parsed_urls):
         try:
             descriptions.append(parse_offer(response.content, url))
         except AttributeError:
-            logging.warning("This offer is not available anymore")
+            log.warning("This offer is not available anymore")
         if DEBUG:
             i += 1
             if i > 3:
@@ -319,10 +322,10 @@ def get_available_main_sub_categories():
     html_parser = BeautifulSoup(response, "html.parser")
     page_content = html_parser.find(class_='maincategories')
     parsed_urls = parse_url(str(page_content))
-    print(parsed_urls)
-    print()
+    log.info(json.dumps(parsed_urls))
+    log.info("\n")
     sub_urls = parse_cat(str(page_content), parsed_urls)
-    print(sub_urls)
+    log.info(sub_urls)
     return sub_urls
 
 
@@ -342,5 +345,5 @@ if __name__ == '__main__':
     # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem",city)
     descriptions = get_description(parsed_urls)
     for element in descriptions:
-        print()
-        print(element)
+        log.info("\n")
+        log.info(json.dumps(element))
