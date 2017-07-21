@@ -26,21 +26,52 @@ def flatten(container):
         else:
             yield i
 
-# TODO: remove polish chars
-def city_name(input):
+
+def city_name(city):
+    POLISH_CHARACTERS = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
     out = ""
-    for char in input:
+    city = city.lower()
+    for char in city:
         if char == " ":
             out += "-"
+        elif char in POLISH_CHARACTERS.keys():
+            out += POLISH_CHARACTERS[char]
         else:
-            out += char.lower()
+            out += char
     return out
+
 
 def url_price_from(price):
     return "search%5Bfilter_float_price%3Afrom%5D=" + str(price)
 
+
 def url_price_to(price):
-    return "search%5Bfilter_float_price%3Ato%5D=800" + str(price)
+    return "search%5Bfilter_float_price%3Ato%5D=" + str(price)
+
+
+def url_rooms(number):
+    numbers = {1: "one", 2: "two", 3: "three", 4: "four"}
+    return "search%5Bfilter_enum_rooms%5D%5B0%5D=" + numbers[number]
+
+
+def url_yardage_from(minimum):
+    return "search%5Bfilter_float_m%3Afrom%5D=" + str(minimum)
+
+
+def url_yardage_to(maximum):
+    return "search%5Bfilter_float_m%3Ato%5D=" + str(maximum)
+
+
+def url_furniture(furniture):
+    if furniture:
+        return "search%5Bfilter_enum_furniture%5D%5B0%5D=yes"
+    else:
+        return "search%5Bfilter_enum_furniture%5D%5B0%5D=no"
+
+
+def url_floor(floor):
+    return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_" + str(floor)
+
 
 def get_url(page=None, *args):
     url = BASE_URL
@@ -49,25 +80,26 @@ def get_url(page=None, *args):
             if "filter" in url and "filter" in element:
                 url += element + "&"
             elif "filter" in element:
-                url += "?" + element + "&"
+                if page is not None:
+                    url += "?" + page + "&" + element + "&"
+                else:
+                    url += "?" + element + "&"
             else:
                 url += element + "/"
-    if page is not None:
-        if "filter" in url:
-            url += "&" + page
-        else:
-            url += "?" + page
     return url
+
 
 def url_buildtype(type):
     return "search%5Bfilter_enum_builttype%5D%5B0%5D=" + type
 
+
+# TODO: Caching for long urls
 @caching
 def get_content_for_url(url):
     response = requests.get(url, allow_redirects=False)
     try:
         response.raise_for_status()
-    except requests.HTTPError as e:
+    except requests.HTTPError:
         print('Request for {} failed.'.format(url))
         return None
     return response
@@ -171,6 +203,10 @@ def parse_flat_data(offer_markup):
 
 def parse_available_offers(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
+    not_found = html_parser.find(class_="emptynew")
+    if not_found is not None:
+        print("No offers found")
+        return
     offers = html_parser.find_all(class_='offer')
     parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][OFFERS_FEATURED_PER_PAGE:]
     return parsed_offers
@@ -216,7 +252,10 @@ def get_category(main_category, subcategory, detail_category, region, *args):
         if response.status_code > 300:
             break
         print("Loaded page {} of offers".format(page))
-        parsed_content.append(parse_available_offers(response.content))
+        offers = parse_available_offers(response.content)
+        if offers is None:
+            break
+        parsed_content.append(offers)
         page += 1
         page_attr = "page={}".format(page)
     parsed_content = list(flatten(parsed_content))
@@ -283,13 +322,20 @@ def get_available_main_sub_categories():
     return sub_urls
 
 
-
 if __name__ == '__main__':
     # get_available_main_sub_categories()
-    p_from = url_price_from(2000)
+    city = city_name("Gdańsk")
+    p_from = url_price_from(1000)
     p_to = url_price_to(3000)
-    typ = "apartamentowiec"
-    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "gdansk",p_from,p_to,typ)
+    furniture = url_furniture(True)
+    typ = url_buildtype("blok")
+    rooms = url_rooms(3)
+    yard_min = url_yardage_from(100)
+    yard_max = url_yardage_to(40)
+    floor = url_floor(4)
+    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, floor)
+    # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, p_from, p_to, typ, rooms)
+    # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem",city)
     descriptions = get_description(parsed_urls)
     for element in descriptions:
         print()
