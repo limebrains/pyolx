@@ -1,5 +1,6 @@
 # python modules
 from urllib.parse import urlparse
+import logging
 
 # third party
 import requests
@@ -12,6 +13,7 @@ BASE_URL = 'https://www.olx.pl/'
 OFFERS_FEATURED_PER_PAGE = 3
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 DEBUG = True
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 WHITELISTED_DOMAINS = [
     'olx.pl',
@@ -97,7 +99,7 @@ def get_content_for_url(url):
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
-        print('Request for {0} failed. Error: '.format(url, e))
+        logging.warning('Request for {0} failed. Error: '.format(url, e))
         return None
     return response
 
@@ -159,8 +161,11 @@ def get_date_added(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     date = html_parser.find(class_="offer-titlebox__details").em.contents
     try:
+        # If offer has been added from mobile there will be longer date details including information about it so date
+        # itself will be on 4th place
         return date[4].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", "")
     except IndexError:
+        # If offer was added from computer index 4 will raise an exception and function will return index 0 so it's date
         return date[0].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
@@ -202,7 +207,7 @@ def parse_available_offers(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
     not_found = html_parser.find(class_="emptynew")
     if not_found is not None:
-        print("No offers found")
+        logging.warning("No offers found")
         return
     offers = html_parser.find_all(class_='offer')
     parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][OFFERS_FEATURED_PER_PAGE:]
@@ -244,11 +249,11 @@ def get_category(main_category, subcategory, detail_category, region, *args):
     page_attr = None
     while True:
         url = get_url(page_attr, main_category, subcategory, detail_category, region, *args)
-        print(url)
+        logging.debug(url)
         response = get_content_for_url(url)
         if response.status_code > 300:
             break
-        print("Loaded page {0} of offers".format(page))
+        logging.info("Loaded page {0} of offers".format(page))
         offers = parse_available_offers(response.content)
         if offers is None:
             break
@@ -256,19 +261,21 @@ def get_category(main_category, subcategory, detail_category, region, *args):
         page += 1
         page_attr = "page={0}".format(page)
     parsed_content = list(flatten(parsed_content))
-    print("Loaded " + str(len(parsed_content)) + " offers")
+    logging.info("Loaded " + str(len(parsed_content)) + " offers")
     return parsed_content
 
 
 def get_description(parsed_urls):
-    i = 0
+    # so it parses just few offers for debugging
+    if DEBUG:
+        i = 0
     descriptions = []
     for url in parsed_urls:
         response = get_content_for_url(url)
         try:
             descriptions.append(parse_offer(response.content, url))
         except AttributeError:
-            print("This offer is not available anymore")
+            logging.warning("This offer is not available anymore")
         if DEBUG:
             i += 1
             if i > 3:
