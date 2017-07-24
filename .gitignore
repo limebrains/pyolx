@@ -100,7 +100,7 @@ ENV/
 # mypy
 .mypy_cache/
 
-cache/
-tests.py
 .DS_Store
 .idea/
+main_sub_categories.py
+docs/

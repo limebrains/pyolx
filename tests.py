@@ -33,12 +33,12 @@ def test_get_paraments(d):
 
 @pytest.mark.parametrize('e', ["blok", "apartamentowiec", "kamienica"])
 def test_builttype(e):
-    assert olx.url_builttype(e)
+    assert "search%5Bfilter_enum_builttype%5D%5B0%5D=" in olx.url_builttype(e)
 
 
 @pytest.mark.parametrize("f", range(-2, 25))
 def test_url_rooms(f):
-    assert olx.url_rooms(f)
+    assert "search%5Bfilter_enum_rooms%5D%5B0%5D=" in olx.url_rooms(f)
 
 
 response = olx.get_content_for_url(GDANSK_URL)

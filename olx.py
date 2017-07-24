@@ -27,6 +27,13 @@ WHITELISTED_DOMAINS = [
 
 
 def flatten(container):
+    """ Flatten a list
+
+    :param container: list with nested lists
+    :type container: list
+    :return: list with elements that were nested in container
+    :rtype: list
+    """
     for i in container:
         if isinstance(i, (list, tuple)):
             for j in flatten(i):
@@ -36,48 +43,133 @@ def flatten(container):
 
 
 def replace_all(text, input_dict):
+    """ Replace specific strings in string
+
+    :param text: string with strings to be replaced
+    :param input_dict: dictionary with elements in format string: string to be replaced with
+    :type text: str
+    :type input_dict: dict
+    :return: String with replaced strings
+    :rtype: str
+    """
     for i, j in input_dict.items():
         text = text.replace(i, j)
     return text
 
 
 def city_name(city):
+    """ Creates valid oxl url city name
+
+    Olx city name can't include polish characters, upper case letters.
+    It also should replace white spaces with dashes.
+
+    :param city: City name not in olx url format
+    :type city: str
+    :return: Valid olx url city name
+    :rtype: str
+
+    :Example:
+
+    city_name("Ruda Śląska") >> "ruda-slaska"
+    """
     return replace_all(city.lower(), POLISH_CHARACTERS_MAPPING).replace(" ", "-")
 
 
 def url_price_from(price):
+    """ Generates olx search filter for minimal price
+
+    :param price: Minimal price for filter offers
+    :type price: int
+    :return: Olx url search filter for minimal price
+    :rtype: str
+    """
     return "search%5Bfilter_float_price%3Afrom%5D={0}".format(str(price))
 
 
 def url_price_to(price):
+    """ Generates olx search filter for maximal price
+
+    :param price: Maximal price for filter offers
+    :type price: int
+    :return: Olx url search filter for maximal price
+    :rtype: str
+    """
     return "search%5Bfilter_float_price%3Ato%5D={0}".format(str(price))
 
 
 def url_rooms(number):
-    # 4 and more rooms as 4
+    """ Generates olx search filter for number of rooms
+
+    Number of rooms can be in range 1 to 4.
+    4 means "4 and more"
+
+    :param number: Number of rooms
+    :type number: int
+    :return: Olx url search filer for number of rooms
+    :rtype: str
+    """
     numbers = {1: "one", 2: "two", 3: "three", 4: "four"}
-    return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers.get(number, 4))
+    return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers.get(number, "four"))
 
 
 def url_surface_from(minimum):
+    """ Generates olx search filter for minimal surface
+
+    :param minimum: Minimal surface
+    :type minimum: int
+    :return: Olx url search filter for minimal surface
+    :rtype: str
+    """
     return "search%5Bfilter_float_m%3Afrom%5D={0}".format(str(minimum))
 
 
 def url_surface_to(maximum):
+    """ Generates olx search filter for maximal surface
+
+    :param maximum: Maximal surface
+    :type maximum: int
+    :return: Olx url search filter for maximal surface
+    :rtype: str
+    """
     return "search%5Bfilter_float_m%3Ato%5D={0}".format(str(maximum))
 
 
 def url_furniture(furniture):
+    """ Generates olx search filter for either furnished or unfurnished offer
+
+    :param furniture: Search for furnished or unfurnished offers
+    :type furniture: bool
+    :return: Olx url search filter
+    :rtype: str
+    """
     return "search%5Bfilter_enum_furniture%5D%5B0%5D={0}".format('yes' if furniture else 'no')
 
 
 def url_floor(floor):
-    # 11 means above 10, 17 means attic
+    """ Generates olx search filter for desired floor of offer
+
+    Floor number can range from -1 to 11 and 17
+    -1 means basement
+    0 means ground floor
+    11 means "10 and more"
+    17 means attic
+
+    :param floor: Desired offer floor
+    :type floor: int
+    :return: Olx url search filter for floor
+    :rtype: str
+    """
     floor_id = 11 if floor > 10 and floor != 17 else str(floor)
     return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_{0}".format(floor_id)
 
 
 def url_builttype(builttype):
+    """ Generates olx search filter for built type
+
+    :param builttype: Built type of offers
+    :type builttype: str
+    :return: Olx url search filter for built type
+    """
     available = ["blok", "kamienica", "szeregowiec", "apartamentowiec", "wolnostojacy", "loft"]
     if builttype in available:
         return "search%5Bfilter_enum_builttype%5D%5B0%5D={0}".format(builttype)
@@ -85,6 +177,14 @@ def url_builttype(builttype):
 
 
 def get_url(page=None, *args):
+    """ Creates olx url for category and search parameters
+
+    :param page: page number in format "page=2"
+    :type page: str
+    :param args: Additional search parameters
+    :return: Olx search url
+    :rtype: str
+    """
     url = BASE_URL
     for element in args:
         if element is not None:
@@ -104,6 +204,12 @@ def get_url(page=None, *args):
 
 
 def get_page_count(markup):
+    """ Reads page number from olx search page
+
+    :param markup: Olx search page markup
+    :return: Total page number extracted from js script
+    :rtype: int
+    """
     html_parser = BeautifulSoup(markup, "html.parser")
     script = html_parser.head.script.next_sibling.next_sibling.next_sibling.text.split(",")
     for element in script:
@@ -115,12 +221,20 @@ def get_page_count(markup):
                     out += char
             return int(out)
     log.warning("Error no page number found. Please check if it's valid olx page.")
-    return 0
+    return 1
 
 
 # TODO: Caching for long urls
 @caching
 def get_content_for_url(url):
+    """ Connects with given url
+
+    If environmental variable DEBUG is True it will cache response for url in /var/temp directory
+
+    :param url: Website url
+    :type url: str
+    :return: Response for requested url
+    """
     response = requests.get(url, allow_redirects=False)
     try:
         response.raise_for_status()
@@ -130,8 +244,17 @@ def get_content_for_url(url):
     return response
 
 
-def parse_offer_url(offer_markup):
-    html_parser = BeautifulSoup(offer_markup, "html.parser")
+def parse_offer_url(markup):
+    """ Searches for offer links in markup
+
+    Offer links on olx are in class "linkWithHash".
+    Only olx.pl domain is whitelisted.
+
+    :param markup: Search page markup
+    :return: Url with offer
+    :rtype: str
+    """
+    html_parser = BeautifulSoup(markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
     if not url or urlparse(url).hostname not in WHITELISTED_DOMAINS:
         # detail url is not present or not supported
@@ -140,11 +263,27 @@ def parse_offer_url(offer_markup):
 
 
 def get_title(offer_markup):
+    """ Searches for offer title on offer page
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Title of offer
+    :rtype: str
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     return html_parser.h1.text.replace("\n", "").replace("  ", "")
 
 
 def get_price(offer_markup):
+    """ Searches for price on offer page
+
+    Assumes price is in PLN
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Price
+    :rtype: int
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     price = html_parser.find(class_="xxxx-large").text
     output = ""
@@ -155,6 +294,15 @@ def get_price(offer_markup):
 
 
 def get_surface(offer_markup):
+    """ Searches for surface in offer markup
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Surface
+    :rtype: float
+
+    :except: When there is no offer surface it will return None
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     try:
         surface = html_parser.sup.parent.text
@@ -165,11 +313,25 @@ def get_surface(offer_markup):
 
 
 def parse_description(offer_markup):
+    """ Searches for description if offer markup
+
+    :param offer_markup: Body from offer page markup
+    :type offer_markup: str
+    :return: Description of offer
+    :rtype: str
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", "").replace("\r", "")
 
 
 def get_img_url(offer_markup):
+    """ Searches for images in offer markup
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Images of offer in list
+    :rtype: list
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     images = html_parser.find_all(class_="bigImage")
     output = []
@@ -179,6 +341,13 @@ def get_img_url(offer_markup):
 
 
 def get_date_added(offer_markup):
+    """ Searches of date of adding offer
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Date of adding offer
+    :rtype: str
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     date = html_parser.find(class_="offer-titlebox__details").em.contents
     if len(date) > 4:
@@ -188,8 +357,16 @@ def get_date_added(offer_markup):
     return date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
-# parses flat data from google tag manager script
 def parse_flat_data(offer_markup):
+    """ Parses flat data from script of Google Tag Manager
+
+    Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
+
+    :param offer_markup: Body from offer page markup
+    :type offer_markup: str
+    :return: Dictionary of flat data
+    :rtype: dict
+    """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     scripts = html_parser.find_all('script')
     for script in scripts:
@@ -227,6 +404,12 @@ def parse_flat_data(offer_markup):
 
 
 def parse_available_offers(markup):
+    """ Collects all offer links on search page markup
+
+    :param markup: Search page markup
+    :return: Links to offer on given search page
+    :rtype: list
+    """
     html_parser = BeautifulSoup(markup, "html.parser")
     not_found = html_parser.find(class_="emptynew")
     if not_found is not None:
@@ -238,6 +421,15 @@ def parse_available_offers(markup):
 
 
 def parse_offer(markup, url):
+    """ Parses data from offer page markup
+
+    :param markup: Offer page markup
+    :param url: Url of current offer page
+    :type markup: str
+    :type url: str
+    :return: Dictionary with all offer details
+    :rtype: dict
+    """
     html_parser = BeautifulSoup(markup, "html.parser")
     offer_content = html_parser.body
     offer_data = parse_flat_data(str(offer_content))
@@ -255,6 +447,16 @@ def parse_offer(markup, url):
 
 
 def get_category(main_category, subcategory, detail_category, region, *args):
+    """ Parses all offers pages in given category
+
+    :param main_category: Main category
+    :param subcategory: Sub category
+    :param detail_category: Detail category
+    :param region: Region
+    :param args: Additional search filters
+    :return: List of all offer urls for category
+    :rtype: list
+    """
     parsed_content = []
     page = 1
     url = get_url(None, main_category, subcategory, detail_category, region, *args)
@@ -280,6 +482,13 @@ def get_category(main_category, subcategory, detail_category, region, *args):
 
 
 def get_descriptions(parsed_urls):
+    """ Parses details of categories
+
+    :param parsed_urls: List of offers urls
+    :type parsed_urls: list
+    :return: List of details of offers
+    :rtype: list
+    """
     descriptions = []
     for url in parsed_urls:
         response = get_content_for_url(url)
@@ -288,48 +497,6 @@ def get_descriptions(parsed_urls):
         except AttributeError as e:
             log.warning("This offer is not available anymore. Error: {0}".format(e))
     return descriptions
-
-
-# Code for every category and subcategory on olx (ignore for now)
-# def parse_url(markup):
-#     html_parser = BeautifulSoup(markup, "html.parser")
-#     try:
-#         output = {}
-#         urls = html_parser.find_all(class_="parent")
-#         for url in urls:
-#             if url.attrs['data-id'].isdigit():
-#                 output[url.attrs['data-id']] = []
-#                 output[url.attrs['data-id']].extend([
-#                     url.span.text,
-#                     url.attrs["href"].split("/")[len(url.attrs["href"].split("/")) - 2]
-#                 ])
-#         return output
-#     except AttributeError:
-#         pass
-#
-#
-# def parse_cat(markup, parsed_urls):
-#     html_parser = BeautifulSoup(markup, "html.parser")
-#     sub_categories = html_parser.find_all(class_="link-relatedcategory")
-#     for sub_category in sub_categories:
-#         parsed_urls[sub_category.attrs['data-category-id']].append(
-#             {sub_category.attrs['data-id']: [
-#                 sub_category.span.span.text,
-#                 sub_category.attrs['href'].split("/")[len(sub_category.attrs['href'].split("/")) - 2]
-#             ]})
-#     return parsed_urls
-#
-#
-# def get_available_main_sub_categories():
-#     url = BASE_URL
-#     response = get_content_for_url(url).content
-#     html_parser = BeautifulSoup(response, "html.parser")
-#     page_content = html_parser.find(class_='maincategories')
-#     parsed_urls = parse_url(str(page_content))
-#     log.info(json.dumps(parsed_urls), "\n")
-#     sub_urls = parse_cat(str(page_content), parsed_urls)
-#     log.info(sub_urls)
-#     return sub_urls
 
 
 if __name__ == '__main__':
