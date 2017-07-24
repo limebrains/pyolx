@@ -1,7 +1,9 @@
 # python modules
 import json
+import re
 from urllib.parse import urlparse
 import logging
+import os
 
 # third party
 import requests
@@ -13,7 +15,7 @@ from scrapper_helpers.utils import caching
 BASE_URL = 'https://www.olx.pl/'
 OFFERS_FEATURED_PER_PAGE = 3
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
-DEBUG = True
+DEBUG = os.environ.get('DEBUG')
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 log = logging.getLogger(__file__)
@@ -33,8 +35,8 @@ def flatten(container):
             yield i
 
 
-def replace_all(text, dic):
-    for i, j in dic.items():
+def replace_all(text, input_dict):
+    for i, j in input_dict.items():
         text = text.replace(i, j)
     return text
 
@@ -53,45 +55,33 @@ def url_price_to(price):
 
 def url_rooms(number):
     # 4 and more rooms as 4
-    if number > 4:
-        number = 4
     numbers = {1: "one", 2: "two", 3: "three", 4: "four"}
-    try:
-        return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers[number])
-    except KeyError:
-        log.warning("Incorrect number of rooms")
-        pass
+    return "search%5Bfilter_enum_rooms%5D%5B0%5D={0}".format(numbers.get(number, 4))
 
 
-def url_yardage_from(minimum):
+def url_surface_from(minimum):
     return "search%5Bfilter_float_m%3Afrom%5D={0}".format(str(minimum))
 
 
-def url_yardage_to(maximum):
+def url_surface_to(maximum):
     return "search%5Bfilter_float_m%3Ato%5D={0}".format(str(maximum))
 
 
 def url_furniture(furniture):
-    if furniture:
-        return "search%5Bfilter_enum_furniture%5D%5B0%5D=yes"
-    else:
-        return "search%5Bfilter_enum_furniture%5D%5B0%5D=no"
+    return "search%5Bfilter_enum_furniture%5D%5B0%5D={0}".format('yes' if furniture else 'no')
 
 
 def url_floor(floor):
-    # 11 means above 10, 17 means "poddasze"
-    if floor > 10 and floor != 17:
-        floor = 11
-    return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_{0}".format(str(floor))
+    # 11 means above 10, 17 means attic
+    floor_id = 11 if floor > 10 and floor != 17 else str(floor)
+    return "search%5Bfilter_enum_floor_select%5D%5B0%5D=floor_{0}".format(floor_id)
 
 
 def url_builttype(builttype):
     available = ["blok", "kamienica", "szeregowiec", "apartamentowiec", "wolnostojacy", "loft"]
     if builttype in available:
         return "search%5Bfilter_enum_builttype%5D%5B0%5D={0}".format(builttype)
-    else:
-        log.warning("This built type isn't available")
-        pass
+    log.warning("This built type isn't available")
 
 
 def get_url(page=None, *args):
@@ -118,9 +108,9 @@ def get_page_count(markup):
     script = html_parser.head.script.next_sibling.next_sibling.next_sibling.text.split(",")
     for element in script:
         if "page_count" in element:
-            tmp = element.split(":")
+            current = element.split(":")
             out = ""
-            for char in tmp[len(tmp) - 1]:
+            for char in current[len(current) - 1]:
                 if char.isdigit():
                     out += char
             return int(out)
@@ -143,19 +133,15 @@ def get_content_for_url(url):
 def parse_offer_url(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
-    if not url:
-        # detail url is not present
-        return []
-    if urlparse(url).hostname not in WHITELISTED_DOMAINS:
-        # domain is not supported by this backend
-        return []
+    if not url or urlparse(url).hostname not in WHITELISTED_DOMAINS:
+        # detail url is not present or not supported
+        return None
     return url
 
 
 def get_title(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    title = html_parser.h1.text
-    return title.replace("\n", "").replace("  ", "")
+    return html_parser.h1.text.replace("\n", "").replace("  ", "")
 
 
 def get_price(offer_markup):
@@ -168,74 +154,76 @@ def get_price(offer_markup):
     return int(output)
 
 
-def get_yardage(offer_markup):
+def get_surface(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     try:
-        yardage = html_parser.sup.parent.text
-        return int(yardage.replace("\t", "").replace("\n", "").replace(" m", ""))
-    except AttributeError:
+        surface = html_parser.sup.parent.text
+    except AttributeError as e:
+        log.debug(e)
         return None
+    return float(surface.replace(" m2", "").replace("\t", "").replace("\n", "").replace(",", "."))
 
 
 def parse_description(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    description = html_parser.find(class_="large").text
-    return description.replace("  ", "").replace("\n", "").replace("\r", "")
+    return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", "").replace("\r", "")
 
 
 def get_img_url(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    img = html_parser.find_all(class_="bigImage")
+    images = html_parser.find_all(class_="bigImage")
     output = []
-    for element in img:
-        output.append(element.attrs["src"])
+    for img in images:
+        output.append(img.attrs["src"])
     return output
 
 
 def get_date_added(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     date = html_parser.find(class_="offer-titlebox__details").em.contents
-    try:
-        # If offer has been added from mobile there will be longer date details including information about it so date
-        # itself will be on 4th place
-        return date[4].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", "")
-    except IndexError:
-        # If offer was added from computer index 4 will raise an exception and function will return index 0 so it's date
-        return date[0].replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
+    if len(date) > 4:
+        date = date[4]
+    else:
+        date = date[0]
+    return date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
 # parses flat data from google tag manager script
 def parse_flat_data(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    data = html_parser.find_all('script')
-    output = {"private_business": None, "floor": None, "rooms": None, "furniture": None, "builttype": None}
-    for element in data:
-        if element.string is not None:
-            current = element.string.split()
-            for ele in current:
-                if "private_business" in ele:
-                    tmp = ele.split(",")
-                    for i, value in enumerate(tmp):
-                        if "private_business" in value and "google" not in value:
-                            output["private_business"] = value.split('"')[3]
-                        elif "floor_select" in value:
-                            floor = value.split('"')
-                            floor_number = ""
-                            for char in floor[3]:
-                                if char.isdigit():
-                                    floor_number += char
-                            output["floor"] = int(floor_number)
-                        elif "rooms" in value:
-                            translate = {"one": 1, "two": 2, "three": 3, "four": 4}
-                            output["rooms"] = translate[value.split('"')[3]]
-                        elif "builttype" in value:
-                            output["builttype"] = value.split('"')[3]
-                        elif "furniture" in value:
-                            if value.split('"')[3] == "yes":
-                                output["furniture"] = True
-                            else:
-                                output["furniture"] = False
-    return output
+    scripts = html_parser.find_all('script')
+    for script in scripts:
+        if "GPT.targeting" in script.string:
+            data = script.string
+            break
+    data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
+    translate = {"one": 1, "two": 2, "three": 3, "four": 4}
+    floor_number = ""
+    floor = data_dict.get("floor_select", None)
+    furniture = data_dict.get("furniture", None)
+    built_type = data_dict.get("builttype", None)
+    rooms = data_dict.get("rooms", None)
+    if floor is not None:
+        for char in data_dict.get("floor_select", None)[0]:
+            if char.isdigit():
+                floor_number += char
+        floor = int(floor_number)
+    if furniture is not None:
+        if furniture[0] == "yes":
+            furniture = True
+        else:
+            furniture = False
+    if rooms is not None:
+        rooms = translate[rooms[0]]
+    if built_type is not None:
+        built_type = built_type[0]
+    return {
+        "private_business": data_dict.get("private_business", None),
+        "floor": floor,
+        "rooms": rooms,
+        "builttype": built_type,
+        "furniture": furniture
+    }
 
 
 def parse_available_offers(markup):
@@ -251,30 +239,18 @@ def parse_available_offers(markup):
 
 def parse_offer(markup, url):
     html_parser = BeautifulSoup(markup, "html.parser")
-    offer_content = html_parser.find(class_='offerbody')
-    parsed_title = get_title(str(offer_content))
-    parsed_price = get_price(str(offer_content))
-    parsed_imgs = get_img_url(str(offer_content))
-    parsed_date = get_date_added(str(offer_content))
-    parsed_yardage = get_yardage(str(offer_content))
-    description = parse_description(str(offer_content))
     offer_content = html_parser.body
     offer_data = parse_flat_data(str(offer_content))
-    keys = list(offer_data.keys())
-    values = list(offer_data.values())
+    offer_content = html_parser.find(class_='offerbody')
     return {
-        "title": parsed_title,
-        "price": parsed_price,
-        "yardage": parsed_yardage,
-        keys[0]: values[0],
-        keys[1]: values[1],
-        keys[2]: values[2],
-        keys[3]: values[3],
-        keys[4]: values[4],
-        "description": description,
+        "title": get_title(str(offer_content)),
+        "price": get_price(str(offer_content)),
+        "surface": get_surface(str(offer_content)),
+        **offer_data,
+        "description": parse_description(str(offer_content)),
         "url": url,
-        "date": parsed_date,
-        "images": parsed_imgs
+        "date": get_date_added(str(offer_content)),
+        "images": get_img_url(str(offer_content))
     }
 
 
@@ -299,86 +275,76 @@ def get_category(main_category, subcategory, detail_category, region, *args):
         page += 1
         page_attr = "page={0}".format(page)
     parsed_content = list(flatten(parsed_content))
-    log.info("Loaded " + str(len(parsed_content)) + " offers")
+    log.info("Loaded {0} offers".format(str(len(parsed_content))))
     return parsed_content
 
 
-def get_description(parsed_urls):
-    # so it parses just few offers for debugging
-    if DEBUG:
-        i = 0
+def get_descriptions(parsed_urls):
     descriptions = []
     for url in parsed_urls:
         response = get_content_for_url(url)
         try:
             descriptions.append(parse_offer(response.content, url))
-        except AttributeError:
-            log.warning("This offer is not available anymore")
-        if DEBUG:
-            i += 1
-            if i > 3:
-                break
+        except AttributeError as e:
+            log.warning("This offer is not available anymore. Error: {0}".format(e))
     return descriptions
 
 
-def parse_url(markup):
-    html_parser = BeautifulSoup(markup, "html.parser")
-    try:
-        output = {}
-        urls = html_parser.find_all(class_="parent")
-        for element in urls:
-            if element.attrs['data-id'].isdigit():
-                output[element.attrs['data-id']] = []
-                output[element.attrs['data-id']].extend(
-                    [element.span.text, element.attrs["href"].split("/")[len(element.attrs["href"].split("/")) - 2]])
-        return output
-    except AttributeError:
-        pass
-
-
-# everything on olx (ignore for now)
-def parse_cat(markup, parsed_urls):
-    html_parser = BeautifulSoup(markup, "html.parser")
-    sub_cats = html_parser.find_all(class_="link-relatedcategory")
-    for element in sub_cats:
-        parsed_urls[element.attrs['data-category-id']].append({element.attrs['data-id']: [element.span.span.text,
-                                                                                          element.attrs['href'].split(
-                                                                                              "/")[
-                                                                                              len(element.attrs[
-                                                                                                  'href'].split(
-                                                                                                  "/")) - 2]]})
-    return parsed_urls
-
-
-# everything on olx
-def get_available_main_sub_categories():
-    url = get_url()
-    response = get_content_for_url(url).content
-    html_parser = BeautifulSoup(response, "html.parser")
-    page_content = html_parser.find(class_='maincategories')
-    parsed_urls = parse_url(str(page_content))
-    log.info(json.dumps(parsed_urls))
-    log.info("\n")
-    sub_urls = parse_cat(str(page_content), parsed_urls)
-    log.info(sub_urls)
-    return sub_urls
+# Code for every category and subcategory on olx (ignore for now)
+# def parse_url(markup):
+#     html_parser = BeautifulSoup(markup, "html.parser")
+#     try:
+#         output = {}
+#         urls = html_parser.find_all(class_="parent")
+#         for url in urls:
+#             if url.attrs['data-id'].isdigit():
+#                 output[url.attrs['data-id']] = []
+#                 output[url.attrs['data-id']].extend([
+#                     url.span.text,
+#                     url.attrs["href"].split("/")[len(url.attrs["href"].split("/")) - 2]
+#                 ])
+#         return output
+#     except AttributeError:
+#         pass
+#
+#
+# def parse_cat(markup, parsed_urls):
+#     html_parser = BeautifulSoup(markup, "html.parser")
+#     sub_categories = html_parser.find_all(class_="link-relatedcategory")
+#     for sub_category in sub_categories:
+#         parsed_urls[sub_category.attrs['data-category-id']].append(
+#             {sub_category.attrs['data-id']: [
+#                 sub_category.span.span.text,
+#                 sub_category.attrs['href'].split("/")[len(sub_category.attrs['href'].split("/")) - 2]
+#             ]})
+#     return parsed_urls
+#
+#
+# def get_available_main_sub_categories():
+#     url = BASE_URL
+#     response = get_content_for_url(url).content
+#     html_parser = BeautifulSoup(response, "html.parser")
+#     page_content = html_parser.find(class_='maincategories')
+#     parsed_urls = parse_url(str(page_content))
+#     log.info(json.dumps(parsed_urls), "\n")
+#     sub_urls = parse_cat(str(page_content), parsed_urls)
+#     log.info(sub_urls)
+#     return sub_urls
 
 
 if __name__ == '__main__':
-    # get_available_main_sub_categories()
     city = city_name("Gdańsk")
-    p_from = url_price_from(1000)
-    p_to = url_price_to(3000)
+    price_from = url_price_from(1000)
+    price_to = url_price_to(3000)
     furniture = url_furniture(True)
-    typ = url_builttype("blok")
+    built_type = url_builttype("blok")
     rooms = url_rooms(3)
-    yard_min = url_yardage_from(100)
-    yard_max = url_yardage_to(40)
+    surface_min = url_surface_from(100)
+    surface_max = url_surface_to(40)
     floor = url_floor(4)
-    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city)
-    # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, p_from, p_to, typ, rooms)
-    # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem",city)
-    descriptions = get_description(parsed_urls)
+    parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city)[:3]
+    # parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", city, price_from, price_to, built_type, rooms)
+    descriptions = get_descriptions(parsed_urls)
     for element in descriptions:
         log.info("\n")
         # json dumps doesn't work with polish chars

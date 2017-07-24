@@ -102,3 +102,5 @@ ENV/
 
 cache/
 tests.py
+.DS_Store
+.idea/
