@@ -104,3 +104,4 @@ ENV/
 .idea/
 main_sub_categories.py
 docs/
+old_one_file.py
