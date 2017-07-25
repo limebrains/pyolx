@@ -1,4 +1,6 @@
-from unittest import mock
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import sys
 
 import pytest
 from bs4 import BeautifulSoup
@@ -7,6 +9,11 @@ import olx
 import olx.utils
 import olx.category
 import olx.offer
+
+if sys.version_info < (3, 3):
+    from mock import mock
+else:
+    from unittest import mock
 
 GDANSK_URL = "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/gdansk/"
 OFFER_URL = "https://www.olx.pl/oferta/mieszkanie-dwupokojowe-na-lawendowym-wzgorzu-CID3-IDnBKeu.html#1d9db51b24"
@@ -151,8 +158,10 @@ def test_get_descriptions(urls):
     ("nieruchomosci", "mieszkania", "wynajem", 'sopot'),
 ])
 def test_get_category(main_category, subcategory, detail_category, region):
-    with mock.patch("olx.category.get_category") as get_url:
+    with mock.patch("olx.utils.get_url") as get_url:
         with mock.patch("olx.utils.get_content_for_url") as get_content_for_url:
-            get_content_for_url.return_value = response
-            get_url.retrun_value = olx.utils.get_url
-            olx.category.get_category(main_category, subcategory, detail_category, region)
+            with mock.patch("olx.category.parse_available_offers") as parse_available_offers:
+                parse_available_offers.return_value = olx.category.parse_available_offers(response.content)
+                get_content_for_url.return_value = response
+                get_url.retrun_value = olx.utils.get_url
+                olx.category.get_category(main_category, subcategory, detail_category, region)

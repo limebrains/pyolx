@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import json
 import logging
 import re
@@ -148,11 +151,18 @@ def parse_offer(markup, url):
     offer_content = str(html_parser.body)
     offer_data = parse_flat_data(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
+    data_keys = list(offer_data.keys())
+    data_values = list(offer_data.values())
     return {
         "title": get_title(offer_content),
         "price": get_price(offer_content),
         "surface": get_surface(offer_content),
-        **offer_data,
+        # **offer_data,
+        data_keys[0]: data_values[0],
+        data_keys[1]: data_values[1],
+        data_keys[2]: data_values[2],
+        data_keys[3]: data_values[3],
+        data_keys[4]: data_values[4],
         "description": parse_description(offer_content),
         "url": url,
         "date": get_date_added(offer_content),

@@ -1,9 +1,18 @@
-from urllib.parse import urlparse
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import logging
+import sys
 
 from bs4 import BeautifulSoup
 
-from olx import WHITELISTED_DOMAINS, OFFERS_FEATURED_PER_PAGE
-from olx.utils import *
+from olx import OFFERS_FEATURED_PER_PAGE, WHITELISTED_DOMAINS
+from olx.utils import city_name, flatten, get_content_for_url, get_url
+
+if sys.version_info < (3, 3):
+    from urlparse import urlparse
+else:
+    from urllib.parse import urlparse
 
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)

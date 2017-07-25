@@ -1,10 +1,18 @@
-from urllib.parse import quote
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import logging
+import sys
 
 import requests
-
 from scrapper_helpers.utils import caching
+
 from olx import BASE_URL
+
+if sys.version_info < (3, 2):
+    from urllib import quote
+else:
+    from urllib.parse import quote
 
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 
