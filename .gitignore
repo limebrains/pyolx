@@ -102,6 +102,7 @@ ENV/
 
 .DS_Store
 .idea/
-main_sub_categories.py
-docs/
-old_one_file.py
+old_files/
+docs/_static/
+docs/_templates/
+docs/make.bat

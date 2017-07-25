@@ -71,6 +71,7 @@ def get_search_filter(filter_name, filter_value):
     :rtype str
 
     :Example:
+
     >> get_search_filter([filter_float_price:from], 2000)
     "search%5Bfilter_float_price%3Afrom%5D=2000"
     """
