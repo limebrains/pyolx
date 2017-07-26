@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+from distutils.core import setup
+
+setup(
+    name='pyolx',
+    version='0.0.2',
+    description="pyolx - python wrapper for olx",
+    author='LimeBrains',
+    author_email='mail@limebrains.com',
+    url='https://github.com/limebrains/pyolx',
+    packages=['olx'],
+)
