@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup
 
 from olx.utils import get_content_for_url
 
+try:
+    from __builtin__ import unicode
+except ImportError:
+    unicode = lambda x, *args: x
+
 log = logging.getLogger(__file__)
 
 

@@ -14,6 +14,7 @@ if sys.version_info < (3, 2):
 else:
     from urllib.parse import quote
 
+
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 
 log = logging.getLogger(__file__)
@@ -47,7 +48,10 @@ def replace_all(text, input_dict):
     """
     for i, j in input_dict.items():
         text = text.replace(i, j)
-    return text
+    if sys.version_info < (3, 3):
+        return text.decode('utf-8')
+    else:
+        return text
 
 
 def city_name(city):
@@ -66,7 +70,11 @@ def city_name(city):
     >> city_name("Ruda Śląska")
     "ruda-slaska"
     """
-    return replace_all(city.lower(), POLISH_CHARACTERS_MAPPING).replace(" ", "-")
+    output = replace_all(city.lower(), POLISH_CHARACTERS_MAPPING).replace(" ", "-")
+    if sys.version_info < (3, 3):
+        return output.encode('utf-8')
+    else:
+        return output
 
 
 def get_search_filter(filter_name, filter_value):

@@ -106,3 +106,9 @@ old_files/
 docs/_static/
 docs/_templates/
 docs/make.bat
+pyolx/bin/
+pyolx/include/
+pyolx/pip-selfcheck.json
+test.py/bin/
+test.py/include/
+test.py/pip-selfcheck.json

@@ -19,7 +19,7 @@ GDANSK_URL = "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/gdansk/"
 OFFER_URL = "https://www.olx.pl/oferta/mieszkanie-dwupokojowe-na-lawendowym-wzgorzu-CID3-IDnBKeu.html#1d9db51b24"
 
 
-@pytest.mark.parametrize("city_name,polish_char_map", [("Ruda Śląska", olx.utils.POLISH_CHARACTERS_MAPPING), ])
+@pytest.mark.parametrize("city_name,polish_char_map", [("Ruda śląska", olx.utils.POLISH_CHARACTERS_MAPPING), ])
 def test_replace_all(city_name, polish_char_map):
     assert olx.utils.replace_all(city_name.lower(), polish_char_map) == "ruda slaska"
 
@@ -106,10 +106,12 @@ def parsed_body(offer_parser):
     return str(offer_parser.find("body"))
 
 
+@pytest.mark.skipif(sys.version_info < (3, 1), reason="requires Python3")
 def test_parse_description(offer_content):
-    assert type(olx.offer.parse_description(offer_content)) == str
+    assert olx.offer.parse_description(offer_content)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 1), reason="requires Python3")
 def test_get_title(offer_content):
     assert olx.offer.get_title(offer_content) == "Mieszkanie dwupokojowe na Lawendowym Wzgórzu"
 
