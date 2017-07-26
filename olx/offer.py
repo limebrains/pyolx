@@ -76,7 +76,7 @@ def parse_description(offer_markup):
     :rtype: str
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", "").replace("\r", "")
+    return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", " ").replace("\r", "")
 
 
 def get_img_url(offer_markup):
