@@ -52,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pyolx'
-copyright = '2017, Arkadiusz Klein'
+copyright = '2017, LimeBrains'
 author = 'Arkadiusz Klein'
 
 # The version info for the project you're documenting, acts as replacement for

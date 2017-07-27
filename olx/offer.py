@@ -179,12 +179,14 @@ def parse_offer(markup, url):
 
 
 def get_descriptions(parsed_urls):
-    """ Parses details of categories
+    """ Parses details of offers in category
 
     :param parsed_urls: List of offers urls
     :type parsed_urls: list
     :return: List of details of offers
     :rtype: list
+
+    :except: If this offer is not available anymore
     """
     descriptions = []
     for url in parsed_urls:

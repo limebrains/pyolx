@@ -80,7 +80,7 @@ def city_name(city):
 def get_search_filter(filter_name, filter_value):
     """ Generates url search filter
 
-    :param filter_name: Filter name in OLX format (reefer to get_category example)
+    :param filter_name: Filter name in OLX format. See :meth:'olx.get_category' for reference
     :param filter_value: Correct value for filter
     :type filter_name: str
     :return: Percent-encoded url search filter
@@ -119,7 +119,7 @@ def get_url(main_category, sub_category, detail_category, region, page=None, **f
     :param detail_category: Detail category
     :param region: Region of search
     :param page: Page number
-    :param filters: Dictionary with additional filters (reefer to get_category example)
+    :param filters: Dictionary with additional filters. See :meth:'olx.get_category' for reference
     :type main_category: str
     :type sub_category: str
     :type detail_category: str
