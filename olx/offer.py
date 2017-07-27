@@ -133,9 +133,12 @@ def parse_flat_data(offer_markup):
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
         rooms = translate[rooms[0]]
+    floor = data_dict.get("floor_select", [None])[0]
+    if floor is not None:
+        floor = int(floor.replace("floor_", ""))
     return {
         "private_business": data_dict.get("private_business", None),
-        "floor": int(data_dict.get("floor_select", [None])[0].replace("floor_", "")),
+        "floor": floor,
         "rooms": rooms,
         "builttype": data_dict.get("builttype", [None])[0],
         "furniture": data_dict.get("furniture", [None])[0] == 'yes'
