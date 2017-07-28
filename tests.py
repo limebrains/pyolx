@@ -165,5 +165,5 @@ def test_get_category(main_category, subcategory, detail_category, region):
             with mock.patch("olx.category.parse_available_offers") as parse_available_offers:
                 parse_available_offers.return_value = olx.category.parse_available_offers(response.content)
                 get_content_for_url.return_value = response
-                get_url.retrun_value = olx.utils.get_url
+                get_url.return_value = olx.utils.get_url
                 olx.category.get_category(main_category, subcategory, detail_category, region)
