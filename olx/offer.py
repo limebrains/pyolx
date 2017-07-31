@@ -133,9 +133,12 @@ def parse_flat_data(offer_markup):
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
         rooms = translate[rooms[0]]
+    floor = data_dict.get("floor_select", [None])[0]
+    if floor is not None:
+        floor = int(floor.replace("floor_", ""))
     return {
         "private_business": data_dict.get("private_business", None),
-        "floor": int(data_dict.get("floor_select", [None])[0].replace("floor_", "")),
+        "floor": floor,
         "rooms": rooms,
         "builttype": data_dict.get("builttype", [None])[0],
         "furniture": data_dict.get("furniture", [None])[0] == 'yes'
@@ -176,12 +179,14 @@ def parse_offer(markup, url):
 
 
 def get_descriptions(parsed_urls):
-    """ Parses details of categories
+    """ Parses details of offers in category
 
     :param parsed_urls: List of offers urls
     :type parsed_urls: list
     :return: List of details of offers
     :rtype: list
+
+    :except: If this offer is not available anymore
     """
     descriptions = []
     for url in parsed_urls:

@@ -19,9 +19,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def get_page_count(markup):
-    """ Reads page number from OLX search page
+    """ Reads total page number from OLX search page
 
     :param markup: OLX search page markup
+    :type markup: str
     :return: Total page number extracted from js script
     :rtype: int
     """
@@ -46,6 +47,7 @@ def parse_offer_url(markup):
     Only www.olx.pl domain is whitelisted.
 
     :param markup: Search page markup
+    :type markup: str
     :return: Url with offer
     :rtype: str
     """
@@ -60,6 +62,7 @@ def parse_available_offers(markup):
     """ Collects all offer links on search page markup
 
     :param markup: Search page markup
+    :type markup: str
     :return: Links to offer on given search page
     :rtype: list
     """
@@ -111,7 +114,8 @@ def get_category(main_category, sub_category, detail_category, region, **filters
     response = get_content_for_url(url)
     page_max = get_page_count(response.content)
     while page is None or page <= page_max:
-        url = get_url(main_category, sub_category, detail_category, city, page, **filters)
+        if page is not None:
+            url = get_url(main_category, sub_category, detail_category, city, page, **filters)
         log.debug(url)
         response = get_content_for_url(url)
         if response.status_code > 300:

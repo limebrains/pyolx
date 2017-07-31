@@ -15,5 +15,5 @@ if __name__ == '__main__':
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "Gdańsk", **search_filters)[:3]
     descriptions = get_descriptions(parsed_urls)
     for element in descriptions:
-        log.info("\n")
+        print()
         print(element)
