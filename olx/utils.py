@@ -152,6 +152,6 @@ def get_content_for_url(url):
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
-        log.warning('Request for {0} failed. Error: '.format(url, e))
+        log.warning('Request for {0} failed. Error: {1}'.format(url, e))
         return None
     return response
