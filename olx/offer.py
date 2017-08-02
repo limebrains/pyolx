@@ -188,8 +188,11 @@ def get_descriptions(parsed_urls):
 
     :except: If this offer is not available anymore
     """
+    print(parsed_urls)
     descriptions = []
     for url in parsed_urls:
+        if url is None:
+            continue
         response = get_content_for_url(url)
         try:
             descriptions.append(parse_offer(response.content, url))
