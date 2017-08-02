@@ -13,7 +13,6 @@ if __name__ == '__main__':
         "[filter_float_price:from]": 1000
     }
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "Gdańsk", **search_filters)[:3]
-    # parsed_urls = get_offers_for_page("nieruchomosci", "mieszkania", "wynajem", "Gdańsk", 3, **search_filters)[:3]
     descriptions = get_descriptions(parsed_urls)
     for element in descriptions:
         print()

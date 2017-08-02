@@ -188,7 +188,6 @@ def get_descriptions(parsed_urls):
 
     :except: If this offer is not available anymore
     """
-    print(parsed_urls)
     descriptions = []
     for url in parsed_urls:
         if url is None:
@@ -198,5 +197,5 @@ def get_descriptions(parsed_urls):
             descriptions.append(parse_offer(response.content, url))
         except AttributeError as e:
             log.info("This offer is not available anymore.")
-            log.debug("Error: {0}".format(e))
+            log.debug("Not found: {0} Error: {1}".format(url, e))
     return descriptions
