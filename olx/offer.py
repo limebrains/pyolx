@@ -190,10 +190,12 @@ def get_descriptions(parsed_urls):
     """
     descriptions = []
     for url in parsed_urls:
+        if url is None:
+            continue
         response = get_content_for_url(url)
         try:
             descriptions.append(parse_offer(response.content, url))
         except AttributeError as e:
             log.info("This offer is not available anymore.")
-            log.debug("Error: {0}".format(e))
+            log.debug("Not found: {0} Error: {1}".format(url, e))
     return descriptions

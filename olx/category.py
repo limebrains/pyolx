@@ -40,6 +40,37 @@ def get_page_count(markup):
     return 1
 
 
+def get_page_count_for_filters(main_category, sub_category, detail_category, region, **filters):
+    """ Reads total page number for given search filters
+
+    :param main_category: Main category
+    :param sub_category: Sub category
+    :param detail_category: Detail category
+    :param region: Region of search
+    :param filters: See :meth category.get_category for reference
+    :type main_category: str
+    :type sub_category: str
+    :type detail_category: str
+    :type region: str
+    :return: Total page number
+    :rtype: int
+    """
+    url = get_url(main_category, sub_category, detail_category, region, **filters)
+    response = get_content_for_url(url)
+    html_parser = BeautifulSoup(response.content, "html.parser")
+    script = html_parser.head.script.next_sibling.next_sibling.next_sibling.text.split(",")
+    for element in script:
+        if "page_count" in element:
+            current = element.split(":")
+            out = ""
+            for char in current[len(current) - 1]:
+                if char.isdigit():
+                    out += char
+            return int(out)
+    log.warning("Error no page number found. Please check if it's valid olx page.")
+    return 1
+
+
 def parse_offer_url(markup):
     """ Searches for offer links in markup
 
@@ -54,7 +85,7 @@ def parse_offer_url(markup):
     html_parser = BeautifulSoup(markup, "html.parser")
     url = html_parser.find(class_="linkWithHash").attrs['href']
     if not url or urlparse(url).hostname not in WHITELISTED_DOMAINS:
-        return None
+        return
     return url
 
 
@@ -131,3 +162,32 @@ def get_category(main_category, sub_category, detail_category, region, **filters
     parsed_content = list(flatten(parsed_content))
     log.info("Loaded {0} offers".format(str(len(parsed_content))))
     return parsed_content
+
+
+def get_offers_for_page(main_category, sub_category, detail_category, region, page, **filters):
+    """ Parses offers for one specific page of given category with filters.
+
+    :param main_category: Main category
+    :param sub_category: Sub category
+    :param detail_category: Detail category
+    :param region: Region of search
+    :param page: Page number
+    :param filters: See :meth category.get_category for reference
+    :type main_category: str
+    :type sub_category: str
+    :type detail_category: str
+    :type region: str
+    :type page: int
+    :type filters: dict
+    :return: List of all offers for given page and parameters
+    :rtype: list
+    """
+    city = city_name(region)
+    url = get_url(main_category, sub_category, detail_category, city, page, **filters)
+    response = get_content_for_url(url)
+    if response.status_code > 300:
+        return
+    log.info("Loaded page {0} of offers".format(page))
+    offers = parse_available_offers(response.content)
+    log.info("Loaded {0} offers".format(str(len(offers))))
+    return offers
