@@ -29,23 +29,60 @@ def get_title(offer_markup):
     return html_parser.h1.text.replace("\n", "").replace("  ", "")
 
 
-def get_price(offer_markup):
+def parse_price(offer_markup):
     """ Searches for price on offer page
 
-    Assumes price is in PLN
-
-    :param offer_markup: Class "offerbody" from offer page markup
+    :param offer_markup: Head from offer page
     :type offer_markup: str
-    :return: Price
+    :return: Tuple of int price and it's currency
+    :rtype: tuple
+    """
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    script = html_parser.find('script').next_sibling.next_sibling.next_sibling.text
+    data_dict = json.loads(re.split("pageView|;", script)[3].replace('":{', "{").replace("}}'", "}"))
+    return int(data_dict["ad_price"]), data_dict["price_currency"]
+
+
+def get_additional_rent(offer_markup):
+    """ Searches for additional rental costs
+
+    :param offer_markup:
+    :type offer_markup: str
+    :return: Additional rent
     :rtype: int
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    price = html_parser.find(class_="xxxx-large").text
-    output = ""
-    for char in price:
-        if char.isdigit():
-            output += char
-    return int(output)
+    table = html_parser.find_all(class_="item")
+    for element in table:
+        if "Czynsz" in element.text:
+            return int(("".join(re.findall(r'\d+', element.text))))
+    return
+
+
+def get_gps(offer_markup):
+    """ Searches for gps coordinates (latitude and longitude)
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Tuple of gps coordinates
+    :rtype: tuple
+    """
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    gps_lat = html_parser.find(class_="mapcontainer").attrs['data-lat']
+    gps_lon = html_parser.find(class_="mapcontainer").attrs['data-lon']
+    return gps_lat, gps_lon
+
+
+def get_poster_name(offer_markup):
+    """ Searches for poster name
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Poster name
+    :rtype: str
+    """
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    return html_parser.h4.text.replace("\n", "").replace("  ", "")
 
 
 def get_surface(offer_markup):
@@ -112,6 +149,16 @@ def get_date_added(offer_markup):
     return date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
+def parse_region(offer_markup):
+    """ Parses region information
+    :param offer_markup:
+    :return:
+    """
+    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    region = html_parser.find(class_="show-map-link").text
+    return region.replace(", ", ",").split(",")
+
+
 def parse_flat_data(offer_markup):
     """ Parses flat data from script of Google Tag Manager
 
@@ -157,13 +204,22 @@ def parse_offer(markup, url):
     """
     html_parser = BeautifulSoup(markup, "html.parser")
     offer_content = str(html_parser.body)
+    offer_price = parse_price(str(html_parser.head))
     offer_data = parse_flat_data(offer_content)
+    gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
     data_keys = list(offer_data.keys())
     data_values = list(offer_data.values())
+    region = parse_region(offer_content)
     return {
         "title": get_title(offer_content),
-        "price": get_price(offer_content),
+        "price": offer_price[0],
+        "additional_rent": get_additional_rent(offer_content),
+        "currency": offer_price[1],
+        "city": region[0],
+        "district": region[2],
+        "voivodeship": region[1],
+        "gps": gps_coordinates,
         "surface": get_surface(offer_content),
         # **offer_data,
         data_keys[0]: data_values[0],
@@ -172,6 +228,7 @@ def parse_offer(markup, url):
         data_keys[3]: data_values[3],
         data_keys[4]: data_values[4],
         "description": parse_description(offer_content),
+        "poster_name": get_poster_name(offer_content),
         "url": url,
         "date": get_date_added(offer_content),
         "images": get_img_url(offer_content)

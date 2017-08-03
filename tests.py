@@ -116,10 +116,6 @@ def test_get_title(offer_content):
     assert olx.offer.get_title(offer_content) == "Mieszkanie dwupokojowe na Lawendowym Wzgórzu"
 
 
-def test_get_price(offer_content):
-    assert olx.offer.get_price(offer_content) == 1700
-
-
 def test_get_surface(offer_content):
     assert olx.offer.get_surface(offer_content) == 38.0
 
