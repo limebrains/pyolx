@@ -29,8 +29,8 @@ def get_title(offer_markup):
     return html_parser.h1.text.replace("\n", "").replace("  ", "")
 
 
-def parse_price(offer_markup):
-    """ Searches for price on offer page
+def parse_tracking_data(offer_markup):
+    """ Parses price and add_id from OLX tracking data script
 
     :param offer_markup: Head from offer page
     :type offer_markup: str
@@ -40,7 +40,7 @@ def parse_price(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     script = html_parser.find('script').next_sibling.next_sibling.next_sibling.text
     data_dict = json.loads(re.split("pageView|;", script)[3].replace('":{', "{").replace("}}'", "}"))
-    return int(data_dict["ad_price"]), data_dict["price_currency"]
+    return int(data_dict["ad_price"]), data_dict["price_currency"], data_dict["ad_id"]
 
 
 def get_additional_rent(offer_markup):
@@ -204,7 +204,7 @@ def parse_offer(markup, url):
     """
     html_parser = BeautifulSoup(markup, "html.parser")
     offer_content = str(html_parser.body)
-    offer_price = parse_price(str(html_parser.head))
+    offer_tracking_data = parse_tracking_data(str(html_parser.head))
     offer_data = parse_flat_data(offer_content)
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
@@ -213,9 +213,10 @@ def parse_offer(markup, url):
     region = parse_region(offer_content)
     return {
         "title": get_title(offer_content),
-        "price": offer_price[0],
+        "add_id": offer_tracking_data[2],
+        "price": offer_tracking_data[0],
         "additional_rent": get_additional_rent(offer_content),
-        "currency": offer_price[1],
+        "currency": offer_tracking_data[1],
         "city": region[0],
         "district": region[2],
         "voivodeship": region[1],
