@@ -151,8 +151,11 @@ def get_date_added(offer_markup):
 
 def parse_region(offer_markup):
     """ Parses region information
-    :param offer_markup:
-    :return:
+
+    :param offer_markup: Class "offerbody" from offer page markup
+    :type offer_markup: str
+    :return: Region of offer
+    :rtype: list
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     region = html_parser.find(class_="show-map-link").text
