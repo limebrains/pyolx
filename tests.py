@@ -19,11 +19,6 @@ GDANSK_URL = "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/gdansk/"
 OFFER_URL = "https://www.olx.pl/oferta/mieszkanie-gdank-5-wzgorz-wysoki-standard-od-sierpnia-2017-CID3-IDnOYSv.html#1d9db51b24"
 
 
-@pytest.mark.parametrize("city_name,polish_char_map", [("Ruda śląska", olx.utils.POLISH_CHARACTERS_MAPPING), ])
-def test_replace_all(city_name, polish_char_map):
-    assert olx.utils.replace_all(city_name.lower(), polish_char_map) == "ruda slaska"
-
-
 @pytest.mark.parametrize("list1", [[[2], [[3], [1]], [4, [0]]]])
 def test_flatten(list1):
     result = olx.utils.flatten(list1)
@@ -45,7 +40,7 @@ def test_get_search_filter(filter_name, filter_value):
 response = olx.utils.get_content_for_url(GDANSK_URL)
 html_parser = BeautifulSoup(response.content, "html.parser")
 offers = html_parser.find_all(class_='offer')
-parsed_urls = ["https://www.olx.pl/oferta/mieszkanie-dwupokojowe-na-lawendowym-wzgorzu-CID3-IDnBKeu.html#1d9db51b24"]
+parsed_urls = [OFFER_URL]
 
 
 @pytest.mark.parametrize("city", [

@@ -5,7 +5,7 @@ import logging
 import sys
 
 import requests
-from scrapper_helpers.utils import caching
+from scrapper_helpers.utils import caching, key_sha1, replace_all
 
 from olx import BASE_URL
 
@@ -13,7 +13,6 @@ if sys.version_info < (3, 2):
     from urllib import quote
 else:
     from urllib.parse import quote
-
 
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 
@@ -34,24 +33,6 @@ def flatten(container):
                 yield j
         else:
             yield i
-
-
-def replace_all(text, input_dict):
-    """ Replace specific strings in string
-
-    :param text: string with strings to be replaced
-    :param input_dict: dictionary with elements in format string: string to be replaced with
-    :type text: str
-    :type input_dict: dict
-    :return: String with replaced strings
-    :rtype: str
-    """
-    for i, j in input_dict.items():
-        text = text.replace(i, j)
-    if sys.version_info < (3, 3):
-        return text.decode('utf-8')
-    else:
-        return text
 
 
 def city_name(city):
@@ -137,8 +118,7 @@ def get_url(main_category, sub_category, detail_category, region, page=None, **f
     return url
 
 
-# TODO: Caching for long urls
-@caching
+@caching(key_func=key_sha1)
 def get_content_for_url(url):
     """ Connects with given url
 
