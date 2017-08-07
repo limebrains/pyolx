@@ -213,6 +213,10 @@ def parse_offer(markup, url):
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
     region = parse_region(offer_content)
+    if len(region) == 3:
+        district = region[2]
+    else:
+        district = None
     return {
         "title": get_title(offer_content),
         "add_id": offer_tracking_data[2],
@@ -220,7 +224,7 @@ def parse_offer(markup, url):
         "additional_rent": get_additional_rent(offer_content),
         "currency": offer_tracking_data[1],
         "city": region[0],
-        "district": region[2],
+        "district": district,
         "voivodeship": region[1],
         "gps": gps_coordinates,
         "surface": get_surface(offer_content),
