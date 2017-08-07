@@ -190,7 +190,7 @@ def parse_flat_data(offer_markup):
         "private_business": data_dict.get("private_business", None),
         "floor": floor,
         "rooms": rooms,
-        "builttype": data_dict.get("builttype", [None])[0],
+        "built_type": data_dict.get("builttype", [None])[0],
         "furniture": data_dict.get("furniture", [None])[0] == 'yes'
     }
 
@@ -211,8 +211,6 @@ def parse_offer(markup, url):
     offer_data = parse_flat_data(offer_content)
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
-    data_keys = list(offer_data.keys())
-    data_values = list(offer_data.values())
     region = parse_region(offer_content)
     return {
         "title": get_title(offer_content),
@@ -226,11 +224,11 @@ def parse_offer(markup, url):
         "gps": gps_coordinates,
         "surface": get_surface(offer_content),
         # **offer_data,
-        data_keys[0]: data_values[0],
-        data_keys[1]: data_values[1],
-        data_keys[2]: data_values[2],
-        data_keys[3]: data_values[3],
-        data_keys[4]: data_values[4],
+        "private_business": offer_data["private_business"],
+        "floor": offer_data["floor"],
+        "rooms": offer_data["rooms"],
+        "built_type": offer_data["built_type"],
+        "furniture": offer_data["furniture"],
         "description": parse_description(offer_content),
         "poster_name": get_poster_name(offer_content),
         "url": url,
