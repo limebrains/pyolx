@@ -205,6 +205,7 @@ def parse_offer(markup, url):
     :return: Dictionary with all offer details
     :rtype: dict
     """
+    log.info(url)
     html_parser = BeautifulSoup(markup, "html.parser")
     offer_content = str(html_parser.body)
     offer_tracking_data = parse_tracking_data(str(html_parser.head))
