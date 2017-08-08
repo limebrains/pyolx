@@ -178,7 +178,10 @@ def parse_flat_data(offer_markup):
         if "GPT.targeting" in script.string:
             data = script.string
             break
-    data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
+    try:
+        data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
+    except json.JSONDecodeError:
+        raise AttributeError("Json failed to parse GTP offer attributes")
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
@@ -207,8 +210,8 @@ def parse_offer(markup, url):
     """
     log.info(url)
     html_parser = BeautifulSoup(markup, "html.parser")
-    offer_content = str(html_parser.body)
     offer_tracking_data = parse_tracking_data(str(html_parser.head))
+    offer_content = str(html_parser.body)
     offer_data = parse_flat_data(offer_content)
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))

@@ -16,7 +16,7 @@ else:
     from unittest import mock
 
 GDANSK_URL = "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/gdansk/"
-OFFER_URL = "https://www.olx.pl/oferta/mieszkanie-gdank-5-wzgorz-wysoki-standard-od-sierpnia-2017-CID3-IDnOYSv.html#1d9db51b24"
+OFFER_URL = "https://www.olx.pl/oferta/gdansk-przymorze-dla-studentow-CID3-IDnT89A.html#1d9db51b24"
 
 
 @pytest.mark.parametrize("list1", [[[2], [[3], [1]], [4, [0]]]])
@@ -43,6 +43,7 @@ offers = html_parser.find_all(class_='offer')
 parsed_urls = [OFFER_URL]
 
 
+@pytest.mark.skipif(sys.version_info < (3, 1), reason="requires Python3")
 @pytest.mark.parametrize("city", [
     "Gdańsk", "Sopot", "Gdynia", "Ruda Śląska", "Łódź"
 ])
@@ -108,11 +109,11 @@ def test_parse_description(offer_content):
 
 @pytest.mark.skipif(sys.version_info < (3, 1), reason="requires Python3")
 def test_get_title(offer_content):
-    assert olx.offer.get_title(offer_content) == "Mieszkanie Gdańk 5 Wzgórz - wysoki standard, od sierpnia 2017"
+    assert olx.offer.get_title(offer_content) == "Gdańsk Przymorze dla studentów"
 
 
 def test_get_surface(offer_content):
-    assert olx.offer.get_surface(offer_content) == 49.0
+    assert olx.offer.get_surface(offer_content) == 38.0
 
 
 def test_get_img_url(offer_content):
@@ -126,16 +127,18 @@ def test_get_date_added(parsed_body):
     assert olx.offer.get_date_added(parsed_body)
 
 
-def test_parse_offer(parsed_body):
-    assert olx.offer.parse_offer(parsed_body, OFFER_URL)
+@pytest.mark.parametrize("offer_url", [OFFER_URL])
+def test_parse_offer(offer_url):
+    response = olx.utils.get_content_for_url(OFFER_URL)
+    assert isinstance(olx.offer.parse_offer(response.content, offer_url), dict)
 
 
 def test_parse_flat_data(parsed_body):
     test = olx.offer.parse_flat_data(parsed_body)
     assert test["private_business"] == "private"
-    assert test["floor"] == 2
+    assert test["floor"] == 6
     assert test["rooms"] == 2
-    assert test["builttype"] == "blok"
+    assert test["built_type"] == "blok"
     assert test["furniture"]
 
 
