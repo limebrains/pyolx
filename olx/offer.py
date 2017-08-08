@@ -181,7 +181,7 @@ def parse_flat_data(offer_markup):
     try:
         data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
     except json.JSONDecodeError:
-        raise AttributeError("Json failed to parse GTP offer attributes")
+        raise AttributeError("JSON failed to parse GPT offer attributes")
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
@@ -216,10 +216,7 @@ def parse_offer(markup, url):
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
     region = parse_region(offer_content)
-    if len(region) == 3:
-        district = region[2]
-    else:
-        district = None
+    district = region[2] if len(region) == 3 else None
     return {
         "title": get_title(offer_content),
         "add_id": offer_tracking_data[2],

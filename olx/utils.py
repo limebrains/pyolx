@@ -110,6 +110,8 @@ def get_url(main_category, sub_category, detail_category, region, page=None, **f
     :return: Url for given parameters
     :rtype: str
     """
+    if page == 0:
+        page = None
     url = "/".join([BASE_URL, main_category, sub_category, detail_category, region, "?"])
     for k, v in filters.items():
         url += get_search_filter(k, v) + "&"
