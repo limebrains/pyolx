@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import random
 import sys
 
 import requests
@@ -17,6 +18,25 @@ else:
 POLISH_CHARACTERS_MAPPING = {"ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n", "ó": "o", "ś": "s", "ż": "z", "ź": "z"}
 
 log = logging.getLogger(__file__)
+
+USER_AGENTS = [
+    'Mozilla/5.0 (CrKey armv7l 1.5.16041) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/'
+    '42.0.2311.135 Safari/537.36 Edge/12.246',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/'
+    '9.0.2 Safari/601.3.9',
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36'
+]
+
+
+def get_random_user_agent():
+    """ Randoms user agent to prevent "python" user agent
+
+    :return: Random user agent from USER_AGENTS
+    :rtype: str
+    """
+    return random.choice(USER_AGENTS)
 
 
 def flatten(container):
@@ -110,6 +130,8 @@ def get_url(main_category, sub_category, detail_category, region, page=None, **f
     :return: Url for given parameters
     :rtype: str
     """
+    if page == 0:
+        page = None
     url = "/".join([BASE_URL, main_category, sub_category, detail_category, region, "?"])
     for k, v in filters.items():
         url += get_search_filter(k, v) + "&"
@@ -128,7 +150,7 @@ def get_content_for_url(url):
     :type url: str
     :return: Response for requested url
     """
-    response = requests.get(url, allow_redirects=False)
+    response = requests.get(url, headers={'User-Agent': get_random_user_agent()}, allow_redirects=False)
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
