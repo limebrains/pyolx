@@ -183,7 +183,10 @@ def get_offers_for_page(main_category, sub_category, detail_category, region, pa
     :rtype: list
     """
     city = city_name(region)
-    url = get_url(main_category, sub_category, detail_category, city, page, **filters)
+    if page != 0:
+        url = get_url(main_category, sub_category, detail_category, city, page, **filters)
+    else:
+        url = get_url(main_category, sub_category, detail_category, city, **filters)
     response = get_content_for_url(url)
     log.info("Loaded page {0} of offers".format(page))
     offers = parse_available_offers(response.content)
