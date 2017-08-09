@@ -122,7 +122,7 @@ def test_get_date_added(parsed_body):
 
 @pytest.mark.parametrize("offer_url", [OFFER_URL])
 def test_parse_offer(offer_url):
-    assert isinstance(olx.offer.parse_offer(offer_url), dict)
+    assert isinstance(olx.offer.parse_offer(offer_url), (dict, type(None)))
 
 
 def test_parse_flat_data(parsed_body):
