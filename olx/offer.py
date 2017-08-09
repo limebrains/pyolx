@@ -198,18 +198,18 @@ def parse_flat_data(offer_markup):
     }
 
 
-def parse_offer(markup, url):
-    """ Parses data from offer page markup
+def parse_offer(url):
+    """ Parses data from offer page url
 
-    :param markup: Offer page markup
+    :param url: Offer page markup
     :param url: Url of current offer page
-    :type markup: str
     :type url: str
     :return: Dictionary with all offer details
     :rtype: dict
     """
     log.info(url)
-    html_parser = BeautifulSoup(markup, "html.parser")
+    response = get_content_for_url(url)
+    html_parser = BeautifulSoup(response.content, "html.parser")
     offer_tracking_data = parse_tracking_data(str(html_parser.head))
     offer_content = str(html_parser.body)
     offer_data = parse_flat_data(offer_content)
@@ -256,9 +256,8 @@ def get_descriptions(parsed_urls):
     for url in parsed_urls:
         if url is None:
             continue
-        response = get_content_for_url(url)
         try:
-            descriptions.append(parse_offer(response.content, url))
+            descriptions.append(parse_offer(url))
         except AttributeError as e:
             log.info("This offer is not available anymore.")
             log.debug("Not found: {0} Error: {1}".format(url, e))
