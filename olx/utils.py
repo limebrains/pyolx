@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import random
 import sys
 
 import requests
