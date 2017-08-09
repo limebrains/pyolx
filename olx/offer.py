@@ -23,7 +23,7 @@ def get_title(offer_markup):
     :param offer_markup: Class "offerbody" from offer page markup
     :type offer_markup: str
     :return: Title of offer
-    :rtype: str
+    :rtype: str, None
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     return html_parser.h1.text.strip()
@@ -34,11 +34,16 @@ def parse_tracking_data(offer_markup):
 
     :param offer_markup: Head from offer page
     :type offer_markup: str
-    :return: Tuple of int price and it's currency
-    :rtype: tuple
+    :return: Tuple of int price and it's currency or None if this offer page got deleted
+    :rtype: tuple, None
+
+    :except: This offer page got deleted and has no tracking script.
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    script = html_parser.find('script').next_sibling.next_sibling.next_sibling.text
+    try:
+        script = html_parser.find('script').next_sibling.next_sibling.next_sibling.text
+    except AttributeError:
+        return
     data_dict = json.loads(re.split("pageView|;", script)[3].replace('":{', "{").replace("}}'", "}"))
     return int(data_dict["ad_price"]), data_dict["price_currency"], data_dict["ad_id"]
 
@@ -78,11 +83,16 @@ def get_poster_name(offer_markup):
 
     :param offer_markup: Class "offerbody" from offer page markup
     :type offer_markup: str
-    :return: Poster name
-    :rtype: str
+    :return: Poster name or None if poster name was not found (offer is outdated)
+    :rtype: str, None
+
+    :except: Poster name not found
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    return html_parser.h4.text.strip()
+    try:
+        return html_parser.h4.text.strip()
+    except AttributeError:
+        return
 
 
 def get_surface(offer_markup):
@@ -90,8 +100,8 @@ def get_surface(offer_markup):
 
     :param offer_markup: Class "offerbody" from offer page markup
     :type offer_markup: str
-    :return: Surface
-    :rtype: float
+    :return: Surface or None if there is no surface
+    :rtype: float, None
 
     :except: When there is no offer surface it will return None
     """
@@ -113,7 +123,7 @@ def parse_description(offer_markup):
     :rtype: str
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
-    return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", " ").replace("\r", "")
+    return html_parser.find(id="textContent").text.replace("  ", "").replace("\n", " ").replace("\r", "").strip()
 
 
 def get_img_url(offer_markup):
@@ -142,10 +152,7 @@ def get_date_added(offer_markup):
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     date = html_parser.find(class_="offer-titlebox__details").em.contents
-    if len(date) > 4:
-        date = date[4]
-    else:
-        date = date[0]
+    date = date[4] if len(date) > 4 else date[0]
     return date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
 
 
@@ -180,8 +187,9 @@ def parse_flat_data(offer_markup):
             break
     try:
         data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
-    except json.JSONDecodeError:
-        raise AttributeError("JSON failed to parse GPT offer attributes")
+    except json.JSONDecodeError as e:
+        logging.info("JSON failed to parse GPT offer attributes. Error: {0}".format(e))
+        return
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
@@ -204,17 +212,23 @@ def parse_offer(url):
     :param url: Offer page markup
     :param url: Url of current offer page
     :type url: str
-    :return: Dictionary with all offer details
-    :rtype: dict
+    :return: Dictionary with all offer details or None if offer is not available anymore
+    :rtype: dict, None
     """
     log.info(url)
     response = get_content_for_url(url)
     html_parser = BeautifulSoup(response.content, "html.parser")
     offer_tracking_data = parse_tracking_data(str(html_parser.head))
+    if offer_tracking_data is None:
+        log.info("Offer {0} is not available anymore.".format(url))
+        return
     offer_content = str(html_parser.body)
     offer_data = parse_flat_data(offer_content)
     gps_coordinates = get_gps(offer_content)
     offer_content = str(html_parser.find(class_='offerbody'))
+    poster_name = get_poster_name(offer_content)
+    if poster_name is None:
+        return
     region = parse_region(offer_content)
     district = region[2] if len(region) == 3 else None
     return {
@@ -235,7 +249,7 @@ def parse_offer(url):
         "built_type": offer_data["built_type"],
         "furniture": offer_data["furniture"],
         "description": parse_description(offer_content),
-        "poster_name": get_poster_name(offer_content),
+        "poster_name": poster_name,
         "url": url,
         "date": get_date_added(offer_content),
         "images": get_img_url(offer_content)
@@ -256,9 +270,7 @@ def get_descriptions(parsed_urls):
     for url in parsed_urls:
         if url is None:
             continue
-        try:
-            descriptions.append(parse_offer(url))
-        except AttributeError as e:
-            log.info("This offer is not available anymore.")
-            log.debug("Not found: {0} Error: {1}".format(url, e))
+        current_offer = parse_offer(url)
+        if current_offer is not None:
+            descriptions.append(current_offer)
     return descriptions
