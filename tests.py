@@ -19,13 +19,6 @@ GDANSK_URL = "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/gdansk/"
 OFFER_URL = "https://www.olx.pl/oferta/gdansk-przymorze-dla-studentow-CID3-IDnT89A.html#1d9db51b24"
 
 
-@pytest.mark.parametrize("list1", [[[2], [[3], [1]], [4, [0]]]])
-def test_flatten(list1):
-    result = olx.utils.flatten(list1)
-    for element in result:
-        assert not isinstance(element, list)
-
-
 @pytest.mark.parametrize("filter_name,filter_value", [
     ("[filter_float_price:from]", 2000),
     ("[filter_enum_floor_select][0]", 2),
@@ -129,8 +122,7 @@ def test_get_date_added(parsed_body):
 
 @pytest.mark.parametrize("offer_url", [OFFER_URL])
 def test_parse_offer(offer_url):
-    response = olx.utils.get_content_for_url(OFFER_URL)
-    assert isinstance(olx.offer.parse_offer(response.content, offer_url), dict)
+    assert isinstance(olx.offer.parse_offer(offer_url), dict)
 
 
 def test_parse_flat_data(parsed_body):

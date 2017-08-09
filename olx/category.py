@@ -5,9 +5,10 @@ import logging
 import sys
 
 from bs4 import BeautifulSoup
+from scrapper_helpers.utils import flatten
 
 from olx import OFFERS_FEATURED_PER_PAGE, WHITELISTED_DOMAINS
-from olx.utils import city_name, flatten, get_content_for_url, get_url
+from olx.utils import city_name, get_content_for_url, get_url
 
 if sys.version_info < (3, 3):
     from urlparse import urlparse
