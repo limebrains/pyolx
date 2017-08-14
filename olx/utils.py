@@ -5,9 +5,9 @@ import logging
 import sys
 
 import requests
-from scrapper_helpers.utils import caching, get_random_user_agent, key_sha1, replace_all
 
 from olx import BASE_URL
+from scrapper_helpers.utils import caching, get_random_user_agent, key_sha1, replace_all
 
 if sys.version_info < (3, 2):
     from urllib import quote
@@ -76,19 +76,21 @@ def get_search_filter(filter_name, filter_value):
     return output
 
 
-def get_url(main_category, sub_category, detail_category, region, page=None, **filters):
+def get_url(main_category, sub_category, detail_category, region, search_query=None, page=None, **filters):
     """ Creates url for given parameters
 
     :param main_category: Main category
     :param sub_category: Sub category
     :param detail_category: Detail category
     :param region: Region of search
+    :param search_query: Search query string
     :param page: Page number
     :param filters: Dictionary with additional filters. See :meth:'olx.get_category' for reference
-    :type main_category: str
-    :type sub_category: str
-    :type detail_category: str
-    :type region: str
+    :type main_category: str, None
+    :type sub_category: str, None
+    :type detail_category: str, None
+    :type region: str, None
+    :type search_query: str
     :type page: int
     :type filters: dict
     :return: Url for given parameters
@@ -96,7 +98,13 @@ def get_url(main_category, sub_category, detail_category, region, page=None, **f
     """
     if page == 0:
         page = None
-    url = "/".join([BASE_URL, main_category, sub_category, detail_category, region, "?"])
+    parameters = list(filter(None, [BASE_URL, main_category, sub_category, detail_category, region,
+                                    "q-{0}".format(search_query.replace(" ", "-")) if search_query else None, "?"]))
+    # When just query string is given - url needs to contain olx.pl/ofery/search_query
+    if len(parameters) == 3 and search_query is not None:
+        url = "{0}/oferty/q-{1}".format(BASE_URL, search_query.replace(" ", "-"))
+    else:
+        url = "/".join(parameters)
     for k, v in filters.items():
         url += get_search_filter(k, v) + "&"
     if page is not None:

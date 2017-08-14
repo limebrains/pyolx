@@ -5,10 +5,10 @@ import logging
 import sys
 
 from bs4 import BeautifulSoup
-from scrapper_helpers.utils import flatten
 
 from olx import OFFERS_FEATURED_PER_PAGE, WHITELISTED_DOMAINS
 from olx.utils import city_name, get_content_for_url, get_url
+from scrapper_helpers.utils import flatten
 
 if sys.version_info < (3, 3):
     from urlparse import urlparse
@@ -108,13 +108,16 @@ def parse_available_offers(markup):
     return parsed_offers
 
 
-def get_category(main_category, sub_category, detail_category, region, **filters):
+def get_category(main_category=None, sub_category=None, detail_category=None, region=None,
+                 search_query=None, user_url=None, **filters):
     """ Parses available offer urls from given category from every page
 
+    :param user_url: User defined url for OLX page with offers. It overrides rest of search filers.
     :param main_category: Main category
     :param sub_category: Sub category
     :param detail_category: Detail category
     :param region: Region of search
+    :param search_query: Additional search query
     :param filters: Dictionary with additional filters. Following example dictionary contains every possible filter
     with examples of it's values.
 
@@ -132,22 +135,30 @@ def get_category(main_category, sub_category, detail_category, region, **filters
         "[filter_enum_rooms][0]": 2 # desired number of rooms, enum: from 1 to 4 (4 and more)
     }
 
+    :type user_url: str
     :type main_category: str
     :type sub_category: str
     :type detail_category: str
     :type region: str
+    :type search_query: str
     :type filters: dict
     :return: List of all offers for given parameters
     :rtype: list
     """
     parsed_content, page = [], None
-    city = city_name(region)
-    url = get_url(main_category, sub_category, detail_category, city, **filters)
+    city = city_name(region) if region else None
+    if user_url is None:
+        url = get_url(main_category, sub_category, detail_category, city, search_query, **filters)
+    else:
+        url = user_url
     response = get_content_for_url(url)
     page_max = get_page_count(response.content)
     while page is None or page <= page_max:
         if page is not None:
-            url = get_url(main_category, sub_category, detail_category, city, page, **filters)
+            if user_url is None:
+                url = get_url(main_category, sub_category, detail_category, city, search_query, page, **filters)
+            else:
+                url = user_url + "&page={0}".format(page)
         log.debug(url)
         response = get_content_for_url(url)
         if response.status_code > 300:
@@ -184,10 +195,7 @@ def get_offers_for_page(main_category, sub_category, detail_category, region, pa
     :rtype: list
     """
     city = city_name(region)
-    if page != 0:
-        url = get_url(main_category, sub_category, detail_category, city, page, **filters)
-    else:
-        url = get_url(main_category, sub_category, detail_category, city, **filters)
+    url = get_url(main_category, sub_category, detail_category, city, page=page, **filters)
     response = get_content_for_url(url)
     log.info("Loaded page {0} of offers".format(page))
     offers = parse_available_offers(response.content)
