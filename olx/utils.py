@@ -5,9 +5,9 @@ import logging
 import sys
 
 import requests
+from scrapper_helpers.utils import caching, get_random_user_agent, key_sha1, replace_all
 
 from olx import BASE_URL
-from scrapper_helpers.utils import caching, get_random_user_agent, key_sha1, replace_all
 
 if sys.version_info < (3, 2):
     from urllib import quote
