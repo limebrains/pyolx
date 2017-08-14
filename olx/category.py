@@ -1,13 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import json
 import logging
+import re
 import sys
 
 from bs4 import BeautifulSoup
 from scrapper_helpers.utils import flatten
 
-from olx import OFFERS_FEATURED_PER_PAGE, WHITELISTED_DOMAINS
+from olx import WHITELISTED_DOMAINS
 from olx.utils import city_name, get_content_for_url, get_url
 
 if sys.version_info < (3, 3):
@@ -72,6 +74,31 @@ def get_page_count_for_filters(main_category, sub_category, detail_category, reg
     return 1
 
 
+def parse_ads_count(markup):
+    """ Reads total number of adds
+
+    :param markup: OLX search page markup
+    :type markup: str
+    :return: Total ads count from script
+    :rtype: int
+    """
+    html_parser = BeautifulSoup(markup, "html.parser")
+    scripts = html_parser.find_all('script')
+    for script in scripts:
+        try:
+            if "GPT.targeting" in script.string:
+                data = script.string
+                break
+        except TypeError:
+            continue
+    try:
+        data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
+    except json.JSONDecodeError as e:
+        logging.info("JSON failed to parse GPT offer attributes. Error: {0}".format(e))
+        return 0
+    return int(data_dict.get("ads_count"))
+
+
 def parse_offer_url(markup):
     """ Searches for offer links in markup
 
@@ -84,7 +111,7 @@ def parse_offer_url(markup):
     :rtype: str
     """
     html_parser = BeautifulSoup(markup, "html.parser")
-    url = html_parser.find(class_="linkWithHash").attrs['href']
+    url = html_parser.find(class_="link").attrs['href']
     if not url or urlparse(url).hostname not in WHITELISTED_DOMAINS:
         return
     return url
@@ -103,16 +130,19 @@ def parse_available_offers(markup):
     if not_found is not None:
         log.warning("No offers found")
         return
+    ads_count = parse_ads_count(markup)
     offers = html_parser.find_all(class_='offer')
-    parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][OFFERS_FEATURED_PER_PAGE:]
+    if len(offers) == 0:
+        offers = html_parser.select("li.wrap.tleft")
+    parsed_offers = [parse_offer_url(str(offer)) for offer in offers if offer][:ads_count]
     return parsed_offers
 
 
-def get_category(main_category=None, sub_category=None, detail_category=None, region=None,
-                 search_query=None, user_url=None, **filters):
+def get_category(main_category=None, sub_category=None, detail_category=None, region=None, search_query=None, url=None,
+                 **filters):
     """ Parses available offer urls from given category from every page
 
-    :param user_url: User defined url for OLX page with offers. It overrides rest of search filers.
+    :param url: User defined url for OLX page with offers. It overrides category parameters and applies search filters.
     :param main_category: Main category
     :param sub_category: Sub category
     :param detail_category: Detail category
@@ -135,7 +165,7 @@ def get_category(main_category=None, sub_category=None, detail_category=None, re
         "[filter_enum_rooms][0]": 2 # desired number of rooms, enum: from 1 to 4 (4 and more)
     }
 
-    :type user_url: str
+    :type url: str
     :type main_category: str
     :type sub_category: str
     :type detail_category: str
@@ -145,31 +175,26 @@ def get_category(main_category=None, sub_category=None, detail_category=None, re
     :return: List of all offers for given parameters
     :rtype: list
     """
-    parsed_content, page = [], None
+    parsed_content, page, start_url = [], 0, None
     city = city_name(region) if region else None
-    if user_url is None:
+    if url is None:
         url = get_url(main_category, sub_category, detail_category, city, search_query, **filters)
     else:
-        url = user_url
+        start_url = url
     response = get_content_for_url(url)
     page_max = get_page_count(response.content)
-    while page is None or page <= page_max:
-        if page is not None:
-            if user_url is None:
-                url = get_url(main_category, sub_category, detail_category, city, search_query, page, **filters)
-            else:
-                url = user_url + "&page={0}".format(page)
+    while page < page_max:
+        if start_url is None:
+            url = get_url(main_category, sub_category, detail_category, city, search_query, page, **filters)
+        else:
+            url = get_url(page=page, user_url=start_url, **filters)
         log.debug(url)
         response = get_content_for_url(url)
-        if response.status_code > 300:
-            break
         log.info("Loaded page {0} of offers".format(page))
         offers = parse_available_offers(response.content)
         if offers is None:
             break
         parsed_content.append(offers)
-        if page is None:
-            page = 1
         page += 1
     parsed_content = list(flatten(parsed_content))
     log.info("Loaded {0} offers".format(str(len(parsed_content))))
