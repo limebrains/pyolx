@@ -45,7 +45,7 @@ def parse_tracking_data(offer_markup):
     except AttributeError:
         return
     data_dict = json.loads(re.split("pageView|;", script)[3].replace('":{', "{").replace("}}'", "}"))
-    return int(data_dict["ad_price"]), data_dict["price_currency"], data_dict["ad_id"]
+    return int(data_dict.get("ad_price", 0)), data_dict.get("price_currency"), data_dict["ad_id"]
 
 
 def get_additional_rent(offer_markup):
@@ -90,7 +90,7 @@ def get_poster_name(offer_markup):
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     try:
-        return html_parser.h4.text.strip()
+        return html_parser.find(class_="offer-user__details").a.text.strip()
     except AttributeError:
         return
 
@@ -108,8 +108,7 @@ def get_surface(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     try:
         surface = html_parser.sup.parent.text
-    except AttributeError as e:
-        log.debug(e)
+    except AttributeError:
         return
     return float(surface.replace("m2", "").strip().replace(",", ".").replace(" ", "")) if "m2" in surface else None
 
@@ -189,7 +188,7 @@ def parse_flat_data(offer_markup):
         data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
     except json.JSONDecodeError as e:
         logging.info("JSON failed to parse GPT offer attributes. Error: {0}".format(e))
-        return
+        return {}
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
     rooms = data_dict.get("rooms", None)
     if rooms is not None:
@@ -234,7 +233,7 @@ def parse_offer(url):
     return {
         "title": get_title(offer_content),
         "add_id": offer_tracking_data[2],
-        "price": offer_tracking_data[0],
+        "price": offer_tracking_data[0] if offer_tracking_data[0] != 0 else None,
         "additional_rent": get_additional_rent(offer_content),
         "currency": offer_tracking_data[1],
         "city": region[0],
@@ -243,11 +242,11 @@ def parse_offer(url):
         "gps": gps_coordinates,
         "surface": get_surface(offer_content),
         # **offer_data,
-        "private_business": offer_data["private_business"],
-        "floor": offer_data["floor"],
-        "rooms": offer_data["rooms"],
-        "built_type": offer_data["built_type"],
-        "furniture": offer_data["furniture"],
+        "private_business": offer_data.get("private_business"),
+        "floor": offer_data.get("floor"),
+        "rooms": offer_data.get("rooms"),
+        "built_type": offer_data.get("built_type"),
+        "furniture": offer_data.get("furniture"),
         "description": parse_description(offer_content),
         "poster_name": poster_name,
         "url": url,

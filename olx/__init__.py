@@ -21,5 +21,3 @@ WHITELISTED_DOMAINS = [
     'olx.pl',
     'www.olx.pl',
 ]
-
-OFFERS_FEATURED_PER_PAGE = 3

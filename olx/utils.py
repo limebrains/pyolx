@@ -76,9 +76,11 @@ def get_search_filter(filter_name, filter_value):
     return output
 
 
-def get_url(main_category, sub_category, detail_category, region, search_query=None, page=None, **filters):
+def get_url(main_category=None, sub_category=None, detail_category=None, region=None, search_query=None, page=None,
+            user_url=None, **filters):
     """ Creates url for given parameters
 
+    :param user_url: User defined OLX search url
     :param main_category: Main category
     :param sub_category: Sub category
     :param detail_category: Detail category
@@ -91,7 +93,7 @@ def get_url(main_category, sub_category, detail_category, region, search_query=N
     :type detail_category: str, None
     :type region: str, None
     :type search_query: str
-    :type page: int
+    :type page: int, None
     :type filters: dict
     :return: Url for given parameters
     :rtype: str
@@ -105,6 +107,8 @@ def get_url(main_category, sub_category, detail_category, region, search_query=N
         url = "{0}/oferty/q-{1}".format(BASE_URL, search_query.replace(" ", "-"))
     else:
         url = "/".join(parameters)
+    if user_url:
+        url = user_url + "?" if "search" not in user_url else user_url + "&"
     for k, v in filters.items():
         url += get_search_filter(k, v) + "&"
     if page is not None:
@@ -122,7 +126,7 @@ def get_content_for_url(url):
     :type url: str
     :return: Response for requested url
     """
-    response = requests.get(url, headers={'User-Agent': get_random_user_agent()}, allow_redirects=False)
+    response = requests.get(url, headers={'User-Agent': get_random_user_agent()})
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
