@@ -110,8 +110,8 @@ def get_surface(offer_markup):
         surface = html_parser.sup.parent.text
     except AttributeError as e:
         log.debug(e)
-        return None
-    return float(surface.replace("m2", "").strip().replace(",", ".").replace(" ", ""))
+        return
+    return float(surface.replace("m2", "").strip().replace(",", ".").replace(" ", "")) if "m2" in surface else None
 
 
 def parse_description(offer_markup):

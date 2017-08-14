@@ -3,7 +3,7 @@
 
 import logging
 
-from olx.category import get_category, get_offers_for_page
+from olx.category import get_category
 from olx.offer import get_descriptions
 
 log = logging.getLogger(__file__)
