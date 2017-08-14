@@ -170,7 +170,7 @@ def parse_region(offer_markup):
 
 def get_gpt_script(offer_markup):
     """
-    Parses flat data from script of Google Tag Manager
+    Parses data from script of Google Tag Manager
 
     :param offer_markup:
     :return: gpt dict data
