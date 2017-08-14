@@ -168,15 +168,12 @@ def parse_region(offer_markup):
     return region.replace(", ", ",").split(",")
 
 
-def parse_flat_data(offer_markup):
-    """ Parses flat data from script of Google Tag Manager
+def get_gpt_script(offer_markup):
+    """
+    Parses flat data from script of Google Tag Manager
 
-    Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
-
-    :param offer_markup: Body from offer page markup
-    :type offer_markup: str
-    :return: Dictionary of flat data
-    :rtype: dict
+    :param offer_markup:
+    :return: gpt dict data
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     scripts = html_parser.find_all('script')
@@ -188,16 +185,29 @@ def parse_flat_data(offer_markup):
         data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
     except json.JSONDecodeError as e:
         logging.info("JSON failed to parse GPT offer attributes. Error: {0}".format(e))
-        return {}
+        data_dict = {}
+    return data_dict
+
+
+def parse_flat_data(offer_markup, data_dict):
+    """
+
+    Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
+
+    :param gpt_script
+    :type gpt_script: dict
+    :return: Dictionary of flat data
+    :rtype: dict
+    """
+
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
-    rooms = data_dict.get("rooms", None)
+    rooms = data_dict.get("rooms")
     if rooms is not None:
         rooms = translate[rooms[0]]
     floor = data_dict.get("floor_select", [None])[0]
     if floor is not None:
         floor = int(floor.replace("floor_", ""))
     return {
-        "private_business": data_dict.get("private_business", None),
         "floor": floor,
         "rooms": rooms,
         "built_type": data_dict.get("builttype", [None])[0],
@@ -234,6 +244,8 @@ def parse_offer(url):
         city, voivodeship = region
         district = None
 
+    data_dict = get_gpt_script(offer_content)
+
     result = {
         "title": get_title(offer_content),
         "add_id": add_id,
@@ -247,10 +259,11 @@ def parse_offer(url):
         "poster_name": poster_name,
         "url": url,
         "date": get_date_added(offer_content),
-        "images": get_img_url(offer_content)
+        "images": get_img_url(offer_content),
+        "private_business": data_dict.get("private_business"),
     }
 
-    flat_data = parse_flat_data(offer_content)
+    flat_data = parse_flat_data(offer_content, data_dict)
 
     if flat_data and any(flat_data.values()):
         result.update(flat_data)
