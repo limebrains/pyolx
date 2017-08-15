@@ -6,9 +6,9 @@ import pytest
 from bs4 import BeautifulSoup
 
 import olx
-import olx.utils
 import olx.category
 import olx.offer
+import olx.utils
 
 if sys.version_info < (3, 3):
     from mock import mock
@@ -125,9 +125,12 @@ def test_parse_offer(offer_url):
     assert isinstance(olx.offer.parse_offer(offer_url), (dict, type(None)))
 
 
+html_parser = BeautifulSoup(olx.utils.get_content_for_url(OFFER_URL).content, "html.parser")
+data_dict = olx.offer.get_gpt_script(str(html_parser.body))
+
+
 def test_parse_flat_data(parsed_body):
-    test = olx.offer.parse_flat_data(parsed_body)
-    assert test["private_business"] == "private"
+    test = olx.offer.parse_flat_data(parsed_body, data_dict)
     assert test["floor"] == 6
     assert test["rooms"] == 2
     assert test["built_type"] == "blok"

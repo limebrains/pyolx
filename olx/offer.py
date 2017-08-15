@@ -43,9 +43,9 @@ def parse_tracking_data(offer_markup):
     try:
         script = html_parser.find('script').next_sibling.next_sibling.next_sibling.text
     except AttributeError:
-        return
+        return None, None, None
     data_dict = json.loads(re.split("pageView|;", script)[3].replace('":{', "{").replace("}}'", "}"))
-    return int(data_dict.get("ad_price", 0)), data_dict.get("price_currency"), data_dict["ad_id"]
+    return int(data_dict.get("ad_price", 0)) or None, data_dict.get("price_currency"), data_dict["ad_id"]
 
 
 def get_additional_rent(offer_markup):
@@ -168,14 +168,12 @@ def parse_region(offer_markup):
     return region.replace(", ", ",").split(",")
 
 
-def parse_flat_data(offer_markup):
-    """ Parses flat data from script of Google Tag Manager
-
-    Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
+def get_gpt_script(offer_markup):
+    """ Parses data from script of Google Tag Manager
 
     :param offer_markup: Body from offer page markup
     :type offer_markup: str
-    :return: Dictionary of flat data
+    :return: GPT dict data
     :rtype: dict
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
@@ -188,20 +186,37 @@ def parse_flat_data(offer_markup):
         data_dict = json.loads((re.split('GPT.targeting = |;', data))[3].replace(";", ""))
     except json.JSONDecodeError as e:
         logging.info("JSON failed to parse GPT offer attributes. Error: {0}".format(e))
-        return {}
+        data_dict = {}
+    return data_dict
+
+
+def parse_flat_data(offer_markup, data_dict):
+    """ Parses flat data
+
+    Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
+
+    :param offer_markup: Body from offer page markup
+    :param data_dict: Dict with GPT script data
+    :type offer_markup: str
+    :type data_dict: dict
+    :return: Dictionary of flat data
+    :rtype: dict
+    """
+
     translate = {"one": 1, "two": 2, "three": 3, "four": 4}
-    rooms = data_dict.get("rooms", None)
+    rooms = data_dict.get("rooms")
     if rooms is not None:
         rooms = translate[rooms[0]]
     floor = data_dict.get("floor_select", [None])[0]
     if floor is not None:
         floor = int(floor.replace("floor_", ""))
     return {
-        "private_business": data_dict.get("private_business", None),
         "floor": floor,
         "rooms": rooms,
         "built_type": data_dict.get("builttype", [None])[0],
-        "furniture": data_dict.get("furniture", [None])[0] == 'yes'
+        "furniture": data_dict.get("furniture", [None])[0] == 'yes',
+        "surface": get_surface(offer_markup),
+        "additional_rent": get_additional_rent(offer_markup),
     }
 
 
@@ -215,44 +230,40 @@ def parse_offer(url):
     :rtype: dict, None
     """
     log.info(url)
-    response = get_content_for_url(url)
-    html_parser = BeautifulSoup(response.content, "html.parser")
-    offer_tracking_data = parse_tracking_data(str(html_parser.head))
-    if offer_tracking_data is None:
+    html_parser = BeautifulSoup(get_content_for_url(url).content, "html.parser")
+    offer_content = str(html_parser.body)
+    poster_name = get_poster_name(offer_content)
+    price, currency, add_id = parse_tracking_data(str(html_parser.head))
+    if not all([currency, add_id, poster_name]):
         log.info("Offer {0} is not available anymore.".format(url))
         return
-    offer_content = str(html_parser.body)
-    offer_data = parse_flat_data(offer_content)
-    gps_coordinates = get_gps(offer_content)
-    offer_content = str(html_parser.find(class_='offerbody'))
-    poster_name = get_poster_name(offer_content)
-    if poster_name is None:
-        return
     region = parse_region(offer_content)
-    district = region[2] if len(region) == 3 else None
-    return {
+    if len(region) == 3:
+        city, voivodeship, district = region
+    else:
+        city, voivodeship = region
+        district = None
+    data_dict = get_gpt_script(offer_content)
+    result = {
         "title": get_title(offer_content),
-        "add_id": offer_tracking_data[2],
-        "price": offer_tracking_data[0] if offer_tracking_data[0] != 0 else None,
-        "additional_rent": get_additional_rent(offer_content),
-        "currency": offer_tracking_data[1],
-        "city": region[0],
+        "add_id": add_id,
+        "price": price,
+        "currency": currency,
+        "city": city,
         "district": district,
-        "voivodeship": region[1],
-        "gps": gps_coordinates,
-        "surface": get_surface(offer_content),
-        # **offer_data,
-        "private_business": offer_data.get("private_business"),
-        "floor": offer_data.get("floor"),
-        "rooms": offer_data.get("rooms"),
-        "built_type": offer_data.get("built_type"),
-        "furniture": offer_data.get("furniture"),
+        "voivodeship": voivodeship,
+        "gps": get_gps(offer_content),
         "description": parse_description(offer_content),
         "poster_name": poster_name,
         "url": url,
         "date": get_date_added(offer_content),
-        "images": get_img_url(offer_content)
+        "images": get_img_url(offer_content),
+        "private_business": data_dict.get("private_business"),
     }
+    flat_data = parse_flat_data(offer_content, data_dict)
+    if flat_data and any(flat_data.values()):
+        result.update(flat_data)
+    return result
 
 
 def get_descriptions(parsed_urls):
