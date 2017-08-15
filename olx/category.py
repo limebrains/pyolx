@@ -111,10 +111,8 @@ def parse_offer_url(markup):
     :rtype: str
     """
     html_parser = BeautifulSoup(markup, "html.parser")
-    url = html_parser.find(class_="link").attrs['href']
-    if not url or urlparse(url).hostname not in WHITELISTED_DOMAINS:
-        return
-    return url
+    url = html_parser.find("a").attrs['href']
+    return url if url else None
 
 
 def parse_available_offers(markup):
