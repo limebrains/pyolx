@@ -3,8 +3,9 @@
 
 import logging
 
+from olx import BASE_URL
 from olx.category import get_category
-from olx.offer import get_descriptions
+from olx.offer import parse_offer
 
 log = logging.getLogger(__file__)
 
@@ -14,7 +15,6 @@ if __name__ == '__main__':
     }
     # parsed_urls = get_category(url="https://www.olx.pl/sopot/q-imac/",**search_filters)[:10]
     parsed_urls = get_category("nieruchomosci", "mieszkania", "wynajem", "Gdańsk", **search_filters)[:3]
-    descriptions = get_descriptions(parsed_urls)
-    for element in descriptions:
+    for element in (parse_offer(url) for url in parsed_urls if url and BASE_URL in url):
         print()
         print(element)

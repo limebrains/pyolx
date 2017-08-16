@@ -169,11 +169,12 @@ def parse_region(offer_markup):
 
 
 def get_gpt_script(offer_markup):
-    """
-    Parses data from script of Google Tag Manager
+    """ Parses data from script of Google Tag Manager
 
-    :param offer_markup:
-    :return: gpt dict data
+    :param offer_markup: Body from offer page markup
+    :type offer_markup: str
+    :return: GPT dict data
+    :rtype: dict
     """
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     scripts = html_parser.find_all('script')
@@ -190,12 +191,14 @@ def get_gpt_script(offer_markup):
 
 
 def parse_flat_data(offer_markup, data_dict):
-    """
+    """ Parses flat data
 
     Data includes if offer private or business, number of floor, number of rooms, built type and furniture.
 
-    :param gpt_script
-    :type gpt_script: dict
+    :param offer_markup: Body from offer page markup
+    :param data_dict: Dict with GPT script data
+    :type offer_markup: str
+    :type data_dict: dict
     :return: Dictionary of flat data
     :rtype: dict
     """
@@ -231,21 +234,16 @@ def parse_offer(url):
     offer_content = str(html_parser.body)
     poster_name = get_poster_name(offer_content)
     price, currency, add_id = parse_tracking_data(str(html_parser.head))
-
-    if not all([currency, add_id, poster_name]):
+    if not all([add_id, poster_name]):
         log.info("Offer {0} is not available anymore.".format(url))
         return
-
     region = parse_region(offer_content)
-
     if len(region) == 3:
         city, voivodeship, district = region
     else:
         city, voivodeship = region
         district = None
-
     data_dict = get_gpt_script(offer_content)
-
     result = {
         "title": get_title(offer_content),
         "add_id": add_id,
@@ -262,30 +260,7 @@ def parse_offer(url):
         "images": get_img_url(offer_content),
         "private_business": data_dict.get("private_business"),
     }
-
     flat_data = parse_flat_data(offer_content, data_dict)
-
     if flat_data and any(flat_data.values()):
         result.update(flat_data)
-
     return result
-
-
-def get_descriptions(parsed_urls):
-    """ Parses details of offers in category
-
-    :param parsed_urls: List of offers urls
-    :type parsed_urls: list
-    :return: List of details of offers
-    :rtype: list
-
-    :except: If this offer is not available anymore
-    """
-    descriptions = []
-    for url in parsed_urls:
-        if url is None:
-            continue
-        current_offer = parse_offer(url)
-        if current_offer is not None:
-            descriptions.append(current_offer)
-    return descriptions

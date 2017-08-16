@@ -16,8 +16,3 @@ if (2, 7) <= sys.version_info < (3, 6):
     logging.basicConfig(level=logging.DEBUG)
 
 BASE_URL = 'https://www.olx.pl'
-
-WHITELISTED_DOMAINS = [
-    'olx.pl',
-    'www.olx.pl',
-]
