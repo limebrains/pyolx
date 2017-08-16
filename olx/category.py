@@ -4,18 +4,11 @@
 import json
 import logging
 import re
-import sys
 
 from bs4 import BeautifulSoup
-from scrapper_helpers.utils import flatten
 
-from olx import WHITELISTED_DOMAINS
 from olx.utils import city_name, get_content_for_url, get_url
-
-if sys.version_info < (3, 3):
-    from urlparse import urlparse
-else:
-    from urllib.parse import urlparse
+from scrapper_helpers.utils import flatten
 
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)

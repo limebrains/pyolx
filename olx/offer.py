@@ -234,7 +234,7 @@ def parse_offer(url):
     offer_content = str(html_parser.body)
     poster_name = get_poster_name(offer_content)
     price, currency, add_id = parse_tracking_data(str(html_parser.head))
-    if not all([currency, add_id, poster_name]):
+    if not all([add_id, poster_name]):
         log.info("Offer {0} is not available anymore.".format(url))
         return
     region = parse_region(offer_content)
@@ -264,23 +264,3 @@ def parse_offer(url):
     if flat_data and any(flat_data.values()):
         result.update(flat_data)
     return result
-
-
-def get_descriptions(parsed_urls):
-    """ Parses details of offers in category
-
-    :param parsed_urls: List of offers urls
-    :type parsed_urls: list
-    :return: List of details of offers
-    :rtype: list
-
-    :except: If this offer is not available anymore
-    """
-    descriptions = []
-    for url in parsed_urls:
-        if url is None:
-            continue
-        current_offer = parse_offer(url)
-        if current_offer is not None:
-            descriptions.append(current_offer)
-    return descriptions

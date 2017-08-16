@@ -137,11 +137,6 @@ def test_parse_flat_data(parsed_body):
     assert test["furniture"]
 
 
-@pytest.mark.parametrize("urls", [parsed_urls])
-def test_get_descriptions(urls):
-    assert isinstance(olx.offer.get_descriptions(urls), list)
-
-
 @pytest.mark.parametrize('main_category,subcategory,detail_category,region', [
     ("nieruchomosci", "mieszkania", "wynajem", 'tczew'),
     ("nieruchomosci", "mieszkania", "wynajem", 'gdansk'),
