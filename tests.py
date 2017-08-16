@@ -63,7 +63,7 @@ def test_get_url(maincat, subcat, detailcat, region, filters):
 
 @pytest.mark.parametrize("page_count", [response.content])
 def test_get_page_count(page_count):
-    assert olx.category.get_page_count(page_count) == 11
+    assert olx.category.get_page_count(page_count) >= 10
 
 
 @pytest.mark.parametrize("test_url", ['https://www.olx.pl/', GDANSK_URL])
