@@ -88,11 +88,15 @@ def get_poster_name(offer_markup):
 
     :except: Poster name not found
     """
-    html_parser = BeautifulSoup(offer_markup, "html.parser")
+    poster_name_parser = BeautifulSoup(offer_markup, "html.parser").find(class_="offer-user__details")
     try:
-        return html_parser.find(class_="offer-user__details").a.text.strip()
+        if poster_name_parser.a is not None:
+            found_name = poster_name_parser.a.text.strip()
+        else:
+            found_name = poster_name_parser.h4.text.strip()
     except AttributeError:
         return
+    return found_name
 
 
 def get_surface(offer_markup):
