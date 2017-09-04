@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+import datetime
 import json
 import logging
 import re
@@ -145,6 +145,24 @@ def get_img_url(offer_markup):
     return output
 
 
+def get_month_num_for_string(value):
+    value = value.lower()[:3]
+    return {
+        'sty': 1,
+        'lut': 2,
+        'mar': 3,
+        'kwi': 4,
+        'maj': 5,
+        'cze': 6,
+        'lip': 7,
+        'sie': 8,
+        'wrz': 9,
+        'paź': 10,
+        'lis': 11,
+        'gru': 12,
+    }.get(value)
+
+
 def get_date_added(offer_markup):
     """ Searches of date of adding offer
 
@@ -156,7 +174,13 @@ def get_date_added(offer_markup):
     html_parser = BeautifulSoup(offer_markup, "html.parser")
     date = html_parser.find(class_="offer-titlebox__details").em.contents
     date = date[4] if len(date) > 4 else date[0]
-    return date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
+    date = date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
+    # 10:09 04 września 2017
+    date_parts = date.split('')
+    hour, minute = date_parts[0].split(':')
+    month = date_parts[2]
+    datetime.datetime(year=date_parts[-1], hour=hour, minute=minute, day=date_parts[1], month=month)
+    return
 
 
 def parse_region(offer_markup):
