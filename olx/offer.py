@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import datetime
+import datetime as dt
 import json
 import logging
 import re
@@ -176,11 +176,13 @@ def get_date_added(offer_markup):
     date = date[4] if len(date) > 4 else date[0]
     date = date.replace("Dodane", "").replace("\n", "").replace("  ", "").replace("o ", "").replace(", ", " ")
     # 10:09 04 września 2017
-    date_parts = date.split('')
-    hour, minute = date_parts[0].split(':')
-    month = date_parts[2]
-    datetime.datetime(year=date_parts[-1], hour=hour, minute=minute, day=date_parts[1], month=month)
-    return
+    date_parts = date.split(' ')
+    hour, minute = map(int, date_parts[0].split(':'))
+    month = get_month_num_for_string(date_parts[2])
+    year = int(date_parts[3])
+    day = int(date_parts[1])
+    date_added = dt.datetime(year=year, hour=hour, minute=minute, day=day, month=month)
+    return int((date_added - dt.datetime(1970, 1, 1)).total_seconds())
 
 
 def parse_region(offer_markup):
@@ -284,7 +286,7 @@ def parse_offer(url):
         "description": parse_description(offer_content),
         "poster_name": poster_name,
         "url": url,
-        "date": get_date_added(offer_content),
+        "date_added": get_date_added(offer_content),
         "images": get_img_url(offer_content),
         "private_business": data_dict.get("private_business"),
     }
