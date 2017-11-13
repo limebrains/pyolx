@@ -11,6 +11,10 @@ Python scrapper for OLX
 ### Installation
 
 ```
+pip install pyolx
+```
+
+```
 pip install -r requirements.txt
 ```
 
